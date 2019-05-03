@@ -12,7 +12,7 @@ pub struct WorkSpace {
 
 impl WorkSpace {
     pub fn init() -> WorkSpace {
-        let path = dir::path_builder(env::home_dir(), ".bifrost/.config");
+        let path = dir::path_builder(dirs::home_dir(), ".bifrost/.config");
         let config = Config::init(path);
 
         let ignore_list: Vec<PathBuf> = vec![
