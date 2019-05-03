@@ -5,6 +5,8 @@ and Asgard, the realm of the gods.
 _This_ Bifröst seeks to be a bridge to other command line tools; really it is
 currently being designed to bridge the gap between one tool in particular. 
 
+[![Build Status](https://travis-ci.org/ericdeansanchez/bifrost.svg?branch=master)](https://travis-ci.org/ericdeansanchez/bifrost)
+
 ## Build
 
 ```bash
