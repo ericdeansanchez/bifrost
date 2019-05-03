@@ -1,0 +1,1 @@
+tests/test_dir/test_ignore_file.txt

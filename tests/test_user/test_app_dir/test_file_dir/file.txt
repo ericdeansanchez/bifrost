@@ -1,0 +1,2 @@
+This file should be ignored when it is in the ignore list
+and should be considered when it is _not_ in the ignore list.

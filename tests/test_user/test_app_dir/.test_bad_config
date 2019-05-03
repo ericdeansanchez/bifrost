@@ -1,0 +1,8 @@
+Not going to worry too much about parsing a bad config file.
+
+Reasons:
+
+1. Might end up using another crate for that.
+2. If dependency reduction is preferred (really license-dependency reduction)
+   then I'll just write a more robust parser and/or more robust style config
+   file.
