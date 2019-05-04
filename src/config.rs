@@ -77,10 +77,9 @@ impl Config {
     /// Lightly validates config_map values. This mostly exists to limit the
     /// size of `Config::init`.
     fn validate(key: &str, config_map: &HashMap<String, bool>) -> bool {
-        match config_map.get::<str>(key) {
-            Some(value) => *value,
-            None => false,
-        }
+        config_map.get::<str>(key).map_or(false,|value| {
+            *value
+        })
     }
 
     /// Very basic parsing function based on a very basic configuration file.
