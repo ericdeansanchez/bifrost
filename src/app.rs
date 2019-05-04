@@ -48,11 +48,58 @@ pub fn app() -> App {
 fn all_sub_commands() -> Vec<App> {
     let mut sub_commands: Vec<App> = vec![];
     sub_command_run(&mut sub_commands);
-    sub_command_load(&mut sub_commands);
     sub_command_show(&mut sub_commands);
     sub_command_unload(&mut sub_commands);
+    sub_command_load(&mut sub_commands);
 
     sub_commands
+}
+
+fn sub_command_run(commands: &mut Vec<App>) {
+    const ABOUT: &str = "Runs --leak-check on contents of bifrost container.";
+    const USAGE: &str = "bifrost run [OPTIONS]";
+
+    let s = SubCommand::with_name("run").about(ABOUT).usage(USAGE);
+
+    commands.push(s);
+}
+
+fn sub_command_show(commands: &mut Vec<App>) {
+    const ABOUT: &str = "Displays files currently in the bifrost container.";
+    const USAGE: &str = "bifrost show [OPTIONS]";
+
+    let s = SubCommand::with_name("show").about(ABOUT).usage(USAGE);
+
+    commands.push(s);
+}
+
+fn sub_command_unload(commands: &mut Vec<App>) {
+    const ABOUT: &str = "Unloads files from bifrost container.";
+    const USAGE: &str = "bifrost unload [OPTIONS]";
+
+    let s = SubCommand::with_name("unload").about(ABOUT).usage(USAGE);
+
+    commands.push(s);
+}
+
+fn sub_command_load(commands: &mut Vec<App>) {
+    const SHORT: &str = "Loads directory, file, or files into bifrost container.";
+    const USAGE: &str = "
+    bifrost load [OPTIONS] <contents>
+    bifrost load [OPTIONS] project/
+    bifrost load [OPTIONS] main.c avl.c bst.c
+";
+
+    let mut s = SubCommand::with_name("load")
+        .about(SHORT)
+        .template(SUBCOMMAND_HELP_TEMPLATE)
+        .usage(USAGE);
+
+    for a in all_load_args() {
+        s = s.arg(a);
+    }
+
+    commands.push(s);
 }
 
 /// Generates a sequence of all args that `load` supports.
@@ -88,6 +135,18 @@ detected and loaded into the bifrost container without having to manually run \
     args.push(a);
 }
 
+/// Builds `args`. Running `bifrost load`, without specifying what should be
+/// loaded, will result in the entire current working directory to be loaded
+/// into the container.
+fn arg_load_contents(args: &mut Vec<Arg>) {
+    const LONG: &str = "Directory, files, or singular file to load into the \
+                        bifrost container.";
+
+    let a = Arg::with_name("contents").help(LONG).long_help(LONG);
+
+    args.push(a);
+}
+
 fn arg_load_modified(args: &mut Vec<Arg>) {
     const SHORT: &str = "Load only files that have been \
                          modified since the last run.";
@@ -103,63 +162,4 @@ fn arg_load_modified(args: &mut Vec<Arg>) {
         .long_help(LONG);
 
     args.push(a);
-}
-
-/// Builds `args`. Running `bifrost load`, without specifying what should be
-/// loaded, will result in the entire current working directory to be loaded
-/// into the container.
-fn arg_load_contents(args: &mut Vec<Arg>) {
-    const LONG: &str = "Directory, files, or singular file to load into the \
-                        bifrost container.";
-
-    let a = Arg::with_name("contents").help(LONG).long_help(LONG);
-
-    args.push(a);
-}
-
-fn sub_command_load(commands: &mut Vec<App>) {
-    const SHORT: &str = "Loads directory, file, or files into bifrost container.";
-    const USAGE: &str = "
-    bifrost load [OPTIONS] <contents>
-    bifrost load [OPTIONS] project/
-    bifrost load [OPTIONS] main.c avl.c bst.c
-";
-
-    let mut s = SubCommand::with_name("load")
-        .about(SHORT)
-        .template(SUBCOMMAND_HELP_TEMPLATE)
-        .usage(USAGE);
-
-    for a in all_load_args() {
-        s = s.arg(a);
-    }
-
-    commands.push(s);
-}
-
-fn sub_command_show(commands: &mut Vec<App>) {
-    const ABOUT: &str = "Displays files currently in the bifrost container.";
-    const USAGE: &str = "bifrost show [OPTIONS]";
-
-    let s = SubCommand::with_name("show").about(ABOUT).usage(USAGE);
-
-    commands.push(s);
-}
-
-fn sub_command_run(commands: &mut Vec<App>) {
-    const ABOUT: &str = "Runs --leak-check on contents of bifrost container.";
-    const USAGE: &str = "bifrost run [OPTIONS]";
-
-    let s = SubCommand::with_name("run").about(ABOUT).usage(USAGE);
-
-    commands.push(s);
-}
-
-fn sub_command_unload(commands: &mut Vec<App>) {
-    const ABOUT: &str = "Unloads files from bifrost container.";
-    const USAGE: &str = "bifrost unload [OPTIONS]";
-
-    let s = SubCommand::with_name("unload").about(ABOUT).usage(USAGE);
-
-    commands.push(s);
 }
