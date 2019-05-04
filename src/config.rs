@@ -109,31 +109,6 @@ mod tests {
     use crate::dir;
 
     #[test]
-    fn test_config_parse() {
-        let mut config_map: HashMap<String, bool> = HashMap::new();
-        let path = dir::path_builder(
-            Some(PathBuf::from("tests/test_user")),
-            "test_app_dir/.test_config",
-        );
-
-        // The .test_config file begins with each variable
-        // set to `false`.
-        let test_map = vec![
-            ("AUTO", false),
-            ("IGNORE_ON_SHOW", false),
-            ("IGNORE_ON_LOAD", false),
-            ("MODIFIED", false),
-        ];
-
-        // Parse the config file and ensure that the parsed key-value
-        // pairs are consistent with what we expect.
-        Config::parse(&path, &mut config_map);
-        for (k, v) in test_map {
-            assert_eq!(v, *config_map.get::<str>(&k).unwrap());
-        }
-    }
-
-    #[test]
     fn test_init_config() {
         let path = dir::path_builder(
             Some(PathBuf::from("tests/test_user")),
@@ -188,5 +163,30 @@ mod tests {
         assert!(!c.auto && !c.ignore_on_show && !c.ignore_on_load && !c.modified);
 
         result
+    }
+
+    #[test]
+    fn test_config_parse() {
+        let mut config_map: HashMap<String, bool> = HashMap::new();
+        let path = dir::path_builder(
+            Some(PathBuf::from("tests/test_user")),
+            "test_app_dir/.test_config",
+        );
+
+        // The .test_config file begins with each variable
+        // set to `false`.
+        let test_map = vec![
+            ("AUTO", false),
+            ("IGNORE_ON_SHOW", false),
+            ("IGNORE_ON_LOAD", false),
+            ("MODIFIED", false),
+        ];
+
+        // Parse the config file and ensure that the parsed key-value
+        // pairs are consistent with what we expect.
+        Config::parse(&path, &mut config_map);
+        for (k, v) in test_map {
+            assert_eq!(v, *config_map.get::<str>(&k).unwrap());
+        }
     }
 }
