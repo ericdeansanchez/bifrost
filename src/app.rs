@@ -32,7 +32,7 @@ pub fn app() -> App {
     let mut app = App::new("bifrost")
         .about("Bridging the tool gap")
         .version("0.1")
-        .author(crate_authors!())
+        .author(crate_authors!(",\n"))
         .template(APP_TEMPLATE)
         .usage(BIFROST_USAGE);
 
