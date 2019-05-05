@@ -47,7 +47,8 @@ pub const EXPLICIT_LONG_HELP: &str = "
 
 
 AUTHORS:
-ericdeansanchez <ericdeansanchez@berkeley.edu>
+ericdeansanchez <ericdeansanchez@berkeley.edu>,
+parkerduckworth <parker_duckworth@icloud.com>
 
 ABOUT:
 Bridging the tool gap
