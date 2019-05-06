@@ -127,6 +127,7 @@ detected and loaded into the bifrost container without having to manually run \
 ";
 
     let a = Arg::with_name("auto")
+        .multiple(true)
         .long("auto")
         .short("a")
         .help(SHORT)
@@ -142,7 +143,7 @@ fn arg_load_contents(args: &mut Vec<Arg>) {
     const LONG: &str = "Directory, files, or singular file to load into the \
                         bifrost container.";
 
-    let a = Arg::with_name("contents").help(LONG).long_help(LONG);
+    let a = Arg::with_name("contents").multiple(true).help(LONG).long_help(LONG);
 
     args.push(a);
 }
@@ -156,6 +157,7 @@ fn arg_load_modified(args: &mut Vec<Arg>) {
          not entirely sure if we're going to keep this behavior.";
 
     let a = Arg::with_name("modified")
+        .multiple(true)
         .long("modified")
         .short("m")
         .help(SHORT)

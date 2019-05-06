@@ -6,7 +6,8 @@ use crate::workspace::WorkSpace;
 pub fn load(workspace: &WorkSpace, contents: &ArgMatches<'static>) {
     // If contents specifies a valid directory, file, or files then load these
     // contents into the container. Otherwise, load the entire `WorkSpace`
-    println!("[STUB] command::load() contents: {:#?}", contents);
+    let args = contents.values_of("contents");
+    println!("[STUB] command::load() contents: {:?}", args)
 }
 
 pub fn unload() {
