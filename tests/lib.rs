@@ -1,7 +1,7 @@
 #[cfg(test)]
 extern crate bifrost;
 
-use bifrost::template::EXPLICIT_LONG_HELP as LONG_HELP;
+use bifrost::util::template::EXPLICIT_LONG_HELP as LONG_HELP;
 
 type App = clap::App<'static, 'static>;
 
@@ -12,7 +12,7 @@ struct TestApp {
 impl TestApp {
     fn init() -> TestApp {
         TestApp {
-            app: bifrost::app::app(),
+            app: bifrost::cli(),
         }
     }
 }

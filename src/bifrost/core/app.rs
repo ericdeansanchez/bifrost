@@ -11,9 +11,9 @@
 //! set; a pattern that _seeks_ to be as modular and as intuitive as possible.
 use clap::SubCommand;
 
-use crate::template::APP_TEMPLATE;
-use crate::template::BIFROST_USAGE;
-use crate::template::SUBCOMMAND_HELP_TEMPLATE;
+use crate::util::template::APP_TEMPLATE;
+use crate::util::template::BIFROST_USAGE;
+use crate::util::template::SUBCOMMAND_HELP_TEMPLATE;
 
 type Arg = clap::Arg<'static, 'static>;
 type App = clap::App<'static, 'static>;
@@ -28,7 +28,7 @@ type App = clap::App<'static, 'static>;
 /// The arguments are built up in the same way: a function to
 /// build the `Arg::with_name` and push it onto a `Vec<Arg>`
 /// and a function to essentially register each argument.
-pub fn app() -> App {
+pub fn cli() -> App {
     let mut app = App::new("bifrost")
         .about("Bridging the tool gap")
         .version("0.1")
@@ -143,7 +143,10 @@ fn arg_load_contents(args: &mut Vec<Arg>) {
     const LONG: &str = "Directory, files, or singular file to load into the \
                         bifrost container.";
 
-    let a = Arg::with_name("contents").multiple(true).help(LONG).long_help(LONG);
+    let a = Arg::with_name("contents")
+        .multiple(true)
+        .help(LONG)
+        .long_help(LONG);
 
     args.push(a);
 }
