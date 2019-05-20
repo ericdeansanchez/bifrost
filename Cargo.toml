@@ -11,8 +11,10 @@ path = "src/bifrost/lib.rs"
 [dependencies]
 clap = "2.33.0"
 dirs = "1.0.5"
+failure = "*"
 libc = "0.2.51"
 regex = "1"
+walkdir = "2.2.7"
 
 [[test]]
 name = "integration"
