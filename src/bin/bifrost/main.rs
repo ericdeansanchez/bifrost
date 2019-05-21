@@ -12,7 +12,7 @@ fn main() -> BifrostResult<()> {
     match app.subcommand() {
         ("init", Some(arg_matches)) => {
             commands::init::exec(config, arg_matches)?;
-        },
+        }
         _ => {
             println!("{}", bifrost::util::template::EXPLICIT_LONG_HELP);
         }
