@@ -1,4 +1,6 @@
+use std::collections::HashMap;
 use std::env;
+use serde_derive::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
 use crate::util::BifrostResult;
@@ -10,7 +12,10 @@ use failure;
 pub struct Config {
     home_path: PathBuf,
     cwd: PathBuf,
+    manifest: Option<BifrostManifest>,
     opts: Option<CommandOptions>,
+    cli_args: Option<Vec<String>>,
+    env_vars: Option<HashMap<String, String>>,
 }
 
 impl Default for Config {
@@ -20,7 +25,10 @@ impl Default for Config {
         Config {
             home_path,
             cwd,
+            manifest: None,
             opts: None,
+            cli_args: None,
+            env_vars: None,
         }
     }
 }
@@ -95,15 +103,57 @@ impl BifrostPath {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+#[derive(Debug, Deserialize, Serialize)]
+struct BifrostGlobalManifest {
+    home_dir: Option<String>,
+    default: Option<BifrostManifest>,
+}
 
-    #[test]
-    fn test_bifrost_path() {
-        assert!(BifrostPath::new(Path::new("configuration")).is_ok());
-        assert!(BifrostPath::new(Path::new("config")).is_err());
-        assert!(BifrostPath::new(Path::new("container")).is_err());
-        assert!(BifrostPath::new(Path::new("Dockerfile")).is_err());
+#[derive(Debug, Deserialize, Serialize)]
+struct BifrostManifest {
+    container: Option<ContainerConfig>,
+    project: Option<ProjectConfig>,
+    workspace: Option<WorkSpaceConfig>,
+    command: Option<CommandConfig>,
+}
+
+impl Default for BifrostManifest {
+    fn default() -> Self {
+        let default_manifest = r#"[project]
+name = "project name"
+
+[container]
+name = "docker"
+
+[workspace]
+name = "name of current workspace"
+ignore = ["target", ".git", ".gitignore"]
+
+[command]
+cmd = ["command string"]
+"#;
+        let default_manifest: BifrostManifest = toml::from_str(&default_manifest).unwrap();
+        default_manifest
     }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct ContainerConfig {
+    name: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct ProjectConfig {
+    name: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct WorkSpaceConfig {
+    name: Option<String>,
+    ignore: Option<Vec<String>>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct CommandConfig {
+    cmd: Option<Vec<String>>,
 }

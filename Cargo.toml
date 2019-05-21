@@ -15,6 +15,9 @@ failure = "*"
 libc = "0.2.51"
 regex = "1"
 walkdir = "2.2.7"
+toml = "0.5"
+serde = "1.0"
+serde_derive = "1.0"
 
 [[test]]
 name = "integration"
