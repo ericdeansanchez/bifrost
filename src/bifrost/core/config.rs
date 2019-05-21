@@ -20,8 +20,10 @@ pub struct Config {
 
 impl Default for Config {
     fn default() -> Self {
-        let home_path = dirs::home_dir().expect("error: `core::Config::default` could not configure home path");
-        let cwd = env::current_dir().expect("error: `core::Config::default` could not configure cwd path");
+        let home_path =
+            dirs::home_dir().expect("error: `core::Config::default` could not configure home path");
+        let cwd = env::current_dir()
+            .expect("error: `core::Config::default` could not configure cwd path");
         Config {
             home_path,
             cwd,
@@ -155,7 +157,6 @@ struct WorkSpaceConfig {
 struct CommandConfig {
     cmd: Option<Vec<String>>,
 }
-
 
 #[cfg(test)]
 mod test {
