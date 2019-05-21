@@ -1,6 +1,6 @@
+use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::env;
-use serde_derive::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
 use crate::util::BifrostResult;
@@ -20,8 +20,8 @@ pub struct Config {
 
 impl Default for Config {
     fn default() -> Self {
-        let home_path = dirs::home_dir().expect("error: could not configure home path");
-        let cwd = env::current_dir().expect("error: `Config::default` could not configure cwd");
+        let home_path = dirs::home_dir().expect("error: `core::Config::default` could not configure home path");
+        let cwd = env::current_dir().expect("error: `core::Config::default` could not configure cwd path");
         Config {
             home_path,
             cwd,
@@ -75,7 +75,7 @@ impl BifrostPath {
             ".config",
             "config",
             "container",
-            "docker",
+            "dockerfile",
             "Docker",
             "Dockerfile",
             "test",
@@ -83,7 +83,7 @@ impl BifrostPath {
 
         match path.as_ref().file_name().and_then(|p| p.to_str()) {
             Some(s) => {
-                if black_list.contains(&s) {
+                if black_list.contains(&s) || s.starts_with(".") {
                     failure::bail!(
                         "error: cannot create proposed path {} because it
                     conflicts with one of the following: {:?}",
@@ -96,17 +96,9 @@ impl BifrostPath {
                     });
                 }
             }
-            None => failure::bail!(
-                "error: cannot verify proposed path, path may have been empty"
-            ),
+            None => failure::bail!("error: cannot verify proposed path, path may have been empty"),
         }
     }
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-struct BifrostGlobalManifest {
-    home_dir: Option<String>,
-    default: Option<BifrostManifest>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -132,8 +124,14 @@ ignore = ["target", ".git", ".gitignore"]
 [command]
 cmd = ["command string"]
 "#;
-        let default_manifest: BifrostManifest = toml::from_str(&default_manifest).unwrap();
-        default_manifest
+        match toml::from_str(&default_manifest) {
+            Ok(valid_toml) => valid_toml,
+            Err(e) => panic!(
+                "BUG: {} attempting to construct \
+                 `BifrostManifest::default` with invalid toml",
+                e
+            ),
+        }
     }
 }
 
@@ -156,4 +154,17 @@ struct WorkSpaceConfig {
 #[derive(Debug, Deserialize, Serialize)]
 struct CommandConfig {
     cmd: Option<Vec<String>>,
+}
+
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_default_manifest() {
+        // This test is to ensure that `BifrostManifest::default` does
+        // not panic.
+        let _dm = BifrostManifest::default();
+    }
 }
