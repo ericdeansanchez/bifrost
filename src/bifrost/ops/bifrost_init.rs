@@ -22,17 +22,20 @@ cmd = ["command string(s)"]
 
     let cwd = cwd.join("Bifrost.toml");
     hofund::write(cwd.as_ref(), toml.as_bytes())?;
-    println!("{}", format!("Initialized default Bifrost realm in {}", cwd.display()));
+    println!(
+        "{}",
+        format!("Initialized default Bifrost realm in {}", cwd.display())
+    );
     Ok(())
 }
 
+/*
 #[cfg(test)]
 mod test {
     use super::*;
 
-    // [HACK] This will break travis.
+    // [BREAK] This will break travis.
     // [NEED] Install scripts.
-    #[cfg(not(linux))]
     #[test]
     fn write_to_tmp() -> BifrostResult<()> {
         (|| -> BifrostResult<()> {
@@ -77,3 +80,4 @@ cmd = ["command string(s)"]
         })()
     }
 }
+*/
