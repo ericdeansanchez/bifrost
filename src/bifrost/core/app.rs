@@ -47,6 +47,7 @@ pub fn cli() -> App {
 /// list.
 fn all_sub_commands() -> Vec<App> {
     let mut sub_commands: Vec<App> = vec![];
+    sub_command_init(&mut sub_commands);
     sub_command_run(&mut sub_commands);
     sub_command_show(&mut sub_commands);
     sub_command_unload(&mut sub_commands);
@@ -55,8 +56,18 @@ fn all_sub_commands() -> Vec<App> {
     sub_commands
 }
 
+fn sub_command_init(commands: &mut Vec<App>) {
+    const ABOUT: &str = "Initialize a bifrost directory \
+                         within the cwd";
+    const USAGE: &str = "bifrost init";
+
+    let s = SubCommand::with_name("init").about(ABOUT).usage(USAGE);
+
+    commands.push(s);
+}
+
 fn sub_command_run(commands: &mut Vec<App>) {
-    const ABOUT: &str = "Runs --leak-check on contents of bifrost container.";
+    const ABOUT: &str = "Run command string(s) on a bifrost workspace";
     const USAGE: &str = "bifrost run [OPTIONS]";
 
     let s = SubCommand::with_name("run").about(ABOUT).usage(USAGE);
@@ -65,7 +76,7 @@ fn sub_command_run(commands: &mut Vec<App>) {
 }
 
 fn sub_command_show(commands: &mut Vec<App>) {
-    const ABOUT: &str = "Displays files currently in the bifrost container.";
+    const ABOUT: &str = "Display files currently in the bifrost container";
     const USAGE: &str = "bifrost show [OPTIONS]";
 
     let s = SubCommand::with_name("show").about(ABOUT).usage(USAGE);
@@ -74,7 +85,7 @@ fn sub_command_show(commands: &mut Vec<App>) {
 }
 
 fn sub_command_unload(commands: &mut Vec<App>) {
-    const ABOUT: &str = "Unloads files from bifrost container.";
+    const ABOUT: &str = "Unload a workspace from the bifrost container";
     const USAGE: &str = "bifrost unload [OPTIONS]";
 
     let s = SubCommand::with_name("unload").about(ABOUT).usage(USAGE);
@@ -83,7 +94,7 @@ fn sub_command_unload(commands: &mut Vec<App>) {
 }
 
 fn sub_command_load(commands: &mut Vec<App>) {
-    const SHORT: &str = "Loads directory, file, or files into bifrost container.";
+    const SHORT: &str = "Load directory, file, or files into the bifrost container";
     const USAGE: &str = "
     bifrost load [OPTIONS] <contents>
     bifrost load [OPTIONS] project/

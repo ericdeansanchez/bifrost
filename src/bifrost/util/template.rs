@@ -59,10 +59,11 @@ FLAGS:
 
 SUBCOMMANDS:
     help      Prints this message or the help of the given subcommand(s)
-    load      Loads directory, file, or files into bifrost container.
-    run       Runs --leak-check on contents of bifrost container.
-    show      Displays files currently in the bifrost container.
-    unload    Unloads files from bifrost container.
+    init      Initialize a bifrost directory within the cwd
+    load      Load directory, file, or files into the bifrost container
+    run       Run command string(s) on a bifrost workspace
+    show      Display files currently in the bifrost container
+    unload    Unload a workspace from the bifrost container
 
 USAGE:
     bifrost [COMMAND] [OPTION] [PROJECT]
