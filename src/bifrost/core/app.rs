@@ -1,4 +1,4 @@
-//! # Generates a top-level user-facing command line application.
+//! # Generates the top-level command line application.
 //! Generates a `clap::App` application. As the overall program grows, it
 //! should be easy to plug-in new commands and functionality without having to
 //! do much in `bifrost::app::app()`. I want to promote modularity without
@@ -54,16 +54,6 @@ fn all_sub_commands() -> Vec<App> {
     sub_command_load(&mut sub_commands);
 
     sub_commands
-}
-
-fn sub_command_init(commands: &mut Vec<App>) {
-    const ABOUT: &str = "Initialize a bifrost directory \
-                         within the cwd";
-    const USAGE: &str = "bifrost init";
-
-    let s = SubCommand::with_name("init").about(ABOUT).usage(USAGE);
-
-    commands.push(s);
 }
 
 fn sub_command_run(commands: &mut Vec<App>) {
@@ -127,7 +117,7 @@ fn all_load_args() -> Vec<Arg> {
 }
 
 fn arg_load_auto(args: &mut Vec<Arg>) {
-    const SHORT: &str = "Turn on auto reloading.";
+    const SHORT: &str = "Turn on auto reloading";
     const LONG: &str = "When `auto` is enabled, modified files are automatically \
 detected and loaded into the bifrost container without having to manually run \
 `bifrost load --modified <files>`:
@@ -152,7 +142,7 @@ detected and loaded into the bifrost container without having to manually run \
 /// into the container.
 fn arg_load_contents(args: &mut Vec<Arg>) {
     const LONG: &str = "Directory, files, or singular file to load into the \
-                        bifrost container.";
+                        bifrost container";
 
     let a = Arg::with_name("contents")
         .multiple(true)
@@ -164,11 +154,13 @@ fn arg_load_contents(args: &mut Vec<Arg>) {
 
 fn arg_load_modified(args: &mut Vec<Arg>) {
     const SHORT: &str = "Load only files that have been \
-                         modified since the last run.";
-    const LONG: &str =
-        "Load only files that have been modified since the last \
-         run. This command avoids reloading the entire contents of your project. We're \
-         not entirely sure if we're going to keep this behavior.";
+                         modified since the last run";
+    const LONG: &str = "
+Load only files that have been modified since the last
+run.
+
+
+";
 
     let a = Arg::with_name("modified")
         .multiple(true)
@@ -176,6 +168,155 @@ fn arg_load_modified(args: &mut Vec<Arg>) {
         .short("m")
         .help(SHORT)
         .long_help(LONG);
+
+    args.push(a);
+}
+
+fn sub_command_init(commands: &mut Vec<App>) {
+    const ABOUT: &str = "Initialize a bifrost directory within the current working directory";
+    const USAGE: &str = "bifrost init
+    bifrost init --project=jupiter
+    bifrost init --project=quasar --workspace=shattuck --ignore=relu
+    bifrost init --project=jupiter --ignore .git --container=docker";
+
+    let mut s = SubCommand::with_name("init")
+        .about(ABOUT)
+        .template(SUBCOMMAND_HELP_TEMPLATE)
+        .usage(USAGE);
+
+    for a in all_init_args() {
+        s = s.arg(a);
+    }
+
+    commands.push(s);
+}
+
+fn all_init_args() -> Vec<Arg> {
+    let mut init_args: Vec<Arg> = vec![];
+    arg_init_project(&mut init_args);
+    arg_init_workspace(&mut init_args);
+    arg_init_ignore(&mut init_args);
+    arg_init_command(&mut init_args);
+    arg_init_container(&mut init_args);
+    init_args
+}
+
+fn arg_init_project(args: &mut Vec<Arg>) {
+    const SHORT: &str = "The project name for a Bifrost realm";
+    const LONG: &str = "
+The project name for a Birfrost realm. This is the
+name will appear in the Bifrost.toml manifest.
+
+    bifrost init --project=<name of project>
+    bifrost init --project=asgard
+    bifrost init --project=midgard
+
+
+";
+
+    let a = Arg::with_name("project")
+        .help(SHORT)
+        .long_help(LONG)
+        .short("p")
+        .long("project")
+        .takes_value(true)
+        .require_equals(true);
+
+    args.push(a);
+}
+
+fn arg_init_workspace(args: &mut Vec<Arg>) {
+    const SHORT: &str = "The workspace name for a Bifrost realm";
+    const LONG: &str = "
+The workspacce name for a Birfrost realm. This is the name will appear
+in the Bifrost.toml manifest.
+
+    bifrost init --workspace=<name of workspace>
+
+
+";
+
+    let a = Arg::with_name("workspace")
+        .help(SHORT)
+        .long_help(LONG)
+        .short("w")
+        .long("workspace")
+        .takes_value(true)
+        .require_equals(true);
+
+    args.push(a);
+}
+
+fn arg_init_ignore(args: &mut Vec<Arg>) {
+    const SHORT: &str = "The files and/or directories to be ignored";
+    const LONG: &str = "
+The names of files and/or directories to be ignored from the Bifrost
+workspace. Typically, these values are .git directories, .gitignore
+files, or other contents that are non-essential to the functionality
+of a project.
+
+    bifrost init --ignore .git
+    bifrost init --ignore .git .gitignore
+    bifrost init --ignore .gitignore target
+
+
+";
+
+    let a = Arg::with_name("ignore")
+        .help(SHORT)
+        .long_help(LONG)
+        .short("i")
+        .long("ignore")
+        .multiple(true)
+        .takes_value(true);
+
+    args.push(a);
+}
+
+fn arg_init_command(args: &mut Vec<Arg>) {
+    const SHORT: &str = "The command string(s) to be passed to the Bifrost container realm";
+    const LONG: &str = "
+The command string(s) will be passed to the Bifrost container realm.
+From there, they will be passed to the specified application to be
+run within the context of the container. An ignore-list can also be
+specified in the Bifrost.toml manifest.
+
+    bifrost init --command <command string and/or args>...
+    bifrost init --command ls
+    bifrost init --command bifrost load src/
+
+
+";
+
+    let a = Arg::with_name("command")
+        .help(SHORT)
+        .long_help(LONG)
+        .short("c")
+        .long("command")
+        .takes_value(true)
+        .multiple(true);
+
+    args.push(a);
+}
+
+fn arg_init_container(args: &mut Vec<Arg>) {
+    const SHORT: &str = "The name of the container to be utilized within the Bifrost realm";
+    const LONG: &str = "The name of the container to be utilized within the
+Bifrost realm. 
+
+    bifrost init --container=<name of container>
+    bifrost init --container=docker
+
+
+";
+
+    let a = Arg::with_name("container")
+        .help(SHORT)
+        .long_help(LONG)
+        .short("t")
+        .long("container")
+        .takes_value(true)
+        .require_equals(true);
 
     args.push(a);
 }

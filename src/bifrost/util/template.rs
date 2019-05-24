@@ -21,7 +21,7 @@ USAGE:{usage}
 ";
 
 pub const BIFROST_USAGE: &str = "
-    bifrost [COMMAND] [OPTION] [PROJECT]
+    bifrost [COMMAND] [OPTION]
     bifrost [COMMAND] [DIR | FILES | FILE]";
 
 // Template for subcommand help messages. This is displayed when invoking
@@ -29,11 +29,12 @@ pub const BIFROST_USAGE: &str = "
 // error with respect to usage.
 pub const SUBCOMMAND_HELP_TEMPLATE: &str = "
 DESCRIPTION:
-{about}
+    {about}
 
 {all-args}
 
-USAGE:{usage}
+USAGE:
+    {usage}
 ";
 
 pub const EXPLICIT_LONG_HELP: &str = "
@@ -59,13 +60,13 @@ FLAGS:
 
 SUBCOMMANDS:
     help      Prints this message or the help of the given subcommand(s)
-    init      Initialize a bifrost directory within the cwd
+    init      Initialize a bifrost directory within the current working directory
     load      Load directory, file, or files into the bifrost container
     run       Run command string(s) on a bifrost workspace
     show      Display files currently in the bifrost container
     unload    Unload a workspace from the bifrost container
 
 USAGE:
-    bifrost [COMMAND] [OPTION] [PROJECT]
+    bifrost [COMMAND] [OPTION]
     bifrost [COMMAND] [DIR | FILES | FILE]
 ";
