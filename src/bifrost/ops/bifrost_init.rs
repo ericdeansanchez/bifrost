@@ -49,8 +49,17 @@ cmd = ["command string(s)"]
         failure::bail!("error: `bifrost init` cannot be run on an existing Bifrost realm")
     }
 
+    let success = |p: &std::path::PathBuf| -> BifrostResult<()> {
+        io::stdout().write_fmt(format_args!(
+            "Initialized default Bifrost realm in {}\n",
+            p.display()
+        ))?;
+        Ok(())
+    };
+
     if args.args.is_empty() {
         hofund::write(&config.cwd().join("Bifrost.toml"), &toml.as_bytes())?;
+        success(config.cwd())?;
     } else {
         let config = config.config_manifest(&args);
         let toml = match &config.manifest() {
@@ -70,11 +79,7 @@ cmd = ["command string(s)"]
         };
 
         hofund::write(&config.cwd().join("Bifrost.toml"), toml.as_bytes())?;
-
-        io::stdout().write_fmt(format_args!(
-            "Initialized default Bifrost realm in {}\n",
-            &config.cwd().display()
-        ))?;
+        success(config.cwd())?;
     }
 
     Ok(())
