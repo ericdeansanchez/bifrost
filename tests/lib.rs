@@ -12,7 +12,7 @@ struct TestApp {
 impl TestApp {
     fn init() -> TestApp {
         TestApp {
-            app: bifrost::cli(),
+            app: bifrost::core::app::cli(),
         }
     }
 }
