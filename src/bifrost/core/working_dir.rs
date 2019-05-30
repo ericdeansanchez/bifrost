@@ -13,7 +13,7 @@ extern crate walkdir;
 
 use walkdir::{DirEntry, WalkDir};
 
-/// # The primary data structure for walking and structuring working-directory information.
+/// The primary data structure for walking and structuring working-directory information.
 pub struct WorkingDir {
     /// The `absolute path to the root`'s parent directory.
     parent: Option<PathBuf>,
@@ -68,9 +68,12 @@ impl WorkingDir {
         }
     }
 
-    pub fn ignore(mut self, list: &[&str]) -> Self {
+    pub fn ignore<S>(mut self, list: &Vec<S>) -> Self
+    where
+        S: AsRef<str>,
+    {
         for path in list {
-            self.ignore_list.insert(path.to_string());
+            self.ignore_list.insert(path.as_ref().to_string());
         }
         self
     }
@@ -182,9 +185,9 @@ mod tests {
         ];
 
         let list = vec![
-            "test_nested_ignore.md",
-            "test_ignore_file.txt",
-            "test_ignore_dir",
+            String::from("test_nested_ignore.md"),
+            String::from("test_ignore_file.txt"),
+            String::from("test_ignore_dir"),
         ];
 
         let mut test_set: HashSet<&'a str> = HashSet::new();
