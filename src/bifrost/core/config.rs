@@ -2,7 +2,7 @@
 use serde_derive::{Deserialize, Serialize};
 use std::env;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use crate::core::hofund;
 use crate::util::BifrostResult;
@@ -258,9 +258,13 @@ impl BifrostManifest {
             )),
         }
     }
+
+    pub fn workspace_config(&self) -> Option<&WorkSpaceConfig> {
+        self.workspace.as_ref()
+    }
 }
 
-fn value_of(arg: &str, from_args: &ArgMatches) -> Option<String> {
+pub fn value_of(arg: &str, from_args: &ArgMatches) -> Option<String> {
     if from_args.is_present(arg) {
         return from_args
             .value_of(arg)
@@ -269,7 +273,7 @@ fn value_of(arg: &str, from_args: &ArgMatches) -> Option<String> {
     None
 }
 
-fn values_of(arg: &str, from_args: &ArgMatches) -> Option<Vec<String>> {
+pub fn values_of(arg: &str, from_args: &ArgMatches) -> Option<Vec<String>> {
     if from_args.is_present(arg) {
         let values: Vec<&str> = from_args
             .values_of(arg)
@@ -307,7 +311,7 @@ impl ProjectConfig {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-struct WorkSpaceConfig {
+pub struct WorkSpaceConfig {
     name: Option<String>,
     ignore: Option<Vec<String>>,
 }
@@ -318,6 +322,14 @@ impl WorkSpaceConfig {
             name: Some(String::from(name)),
             ignore: Some(ignore),
         }
+    }
+
+    pub fn name(&self) -> Option<&str> {
+        self.name.as_ref().map(|n| n.as_ref())
+    }
+
+    pub fn ignore(&self) -> Option<&Vec<String>> {
+        self.ignore.as_ref().map(|i| i.as_ref())
     }
 }
 
@@ -330,79 +342,16 @@ impl CommandConfig {
     fn new(cmd: Vec<String>) -> Self {
         CommandConfig { cmd: Some(cmd) }
     }
-}
 
-#[derive(Debug)]
-pub enum CommandOptions {
-    Load(LoadOptions),
-    Show(ShowOptions),
-    Run(RunOptions),
-    Unload(UnloadOptions),
-}
-
-#[derive(Debug)]
-pub struct LoadOptions {
-    src: PathBuf,
-    dst: BifrostPath,
-}
-
-#[derive(Debug)]
-pub struct ShowOptions {
-    path: BifrostPath,
-}
-
-#[derive(Debug)]
-pub struct RunOptions {
-    path: BifrostPath,
-}
-
-#[derive(Debug)]
-pub struct UnloadOptions {
-    path: BifrostPath,
-}
-
-#[derive(Debug)]
-pub struct BifrostPath {
-    path: PathBuf,
-}
-
-impl BifrostPath {
-    fn _new<P: AsRef<Path>>(path: P) -> BifrostResult<Self> {
-        let black_list = [
-            ".bifrost",
-            "bifrost",
-            ".config",
-            "config",
-            "container",
-            "dockerfile",
-            "Docker",
-            "Dockerfile",
-            "test",
-        ];
-
-        match path.as_ref().file_name().and_then(|p| p.to_str()) {
-            Some(s) => {
-                if black_list.contains(&s) || s.starts_with(".") {
-                    failure::bail!(
-                        "error: cannot create proposed path {} because it
-                    conflicts with one of the following: {:?}",
-                        s,
-                        black_list
-                    )
-                } else {
-                    return Ok(BifrostPath {
-                        path: path.as_ref().to_path_buf(),
-                    });
-                }
-            }
-            None => failure::bail!("error: cannot verify proposed path, path may have been empty"),
-        }
+    pub fn cmd(&self) -> Option<&Vec<String>> {
+        self.cmd.as_ref().map(|c| c.as_ref())
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use std::path::Path;
 
     #[test]
     fn test_default_manifest() {
