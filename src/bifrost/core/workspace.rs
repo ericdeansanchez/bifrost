@@ -1,5 +1,6 @@
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process;
 
 use crate::core::config::{values_of, Config};
 use crate::core::working_dir::WorkingDir;
@@ -28,21 +29,33 @@ impl Default for WorkSpace {
 }
 
 impl WorkSpace {
+    /// Initializes a `WorkSpace` from a `Config` and `clap::ArgMatches`. If no
+    /// contents were specified, then `ws_args` will be empty. When `ws_args` is
+    /// empty the default behavior is to construct this `WorkSpace`s contents from
+    /// the current working directory.
+    ///
+    /// If arguments were passed (i.e. through `$ bifrost load --contents main.c`),
+    /// then all arguments present in `ws_args` are processed. Valid path-names
+    /// are converted to `PathBuf`s from which this `WorkSpace`'s contents will
+    /// be constructed.
     pub fn init(config: Config, args: &ArgMatches) -> Self {
-        let ws_name = WorkSpace::get_workspace_name(&config);
-        let ws_mode = flag(&args);
-
-        let ws_ignore_list = WorkSpace::build_ignore_list(&config);
-        let ws_list: Vec<&str> = ws_ignore_list.iter().map(|s| s.as_ref()).collect();
-
-        let ws_args = values_of("contents", &args).map_or(vec![], |v| v);
-        let ws_path_names = strip(&ws_args);
-        let ws_paths = check(config.cwd(), ws_path_names);
-        let ws_abs_paths = to_abs_path(config.cwd(), ws_paths);
+        let (ws_mode, ws_args) = WorkSpaceBuilder::values_from_args(&args);
+        let (ws_name, ws_ignore_list) = WorkSpaceBuilder::values_from_config(&config);
 
         let mut contents: Vec<WorkingDir> = Vec::new();
-        for path in ws_abs_paths {
-            contents.push(WorkingDir::new(path).ignore(&ws_list));
+        if ws_args.is_empty() {
+            contents.push(WorkingDir::new(config.cwd()).ignore(&ws_ignore_list));
+        } else {
+            let paths = WorkSpaceBuilder::args_to_paths(&config, ws_args);
+
+            if paths.is_empty() {
+                eprintln!("error: contents were passed but no arguments represent valid content");
+                process::exit(1);
+            }
+
+            for path in paths {
+                contents.push(WorkingDir::new(path).ignore(&ws_ignore_list));
+            }
         }
 
         WorkSpace {
@@ -53,8 +66,15 @@ impl WorkSpace {
             bifrost_path: None,
         }
     }
+}
 
-    fn build_ignore_list(config: &Config) -> Vec<String> {
+struct WorkSpaceBuilder;
+
+impl WorkSpaceBuilder {
+    // Returns the ignore list from the manifest if it exists. Otherwise, an
+    // empty vector will be returned meaning that no files will be ignored in
+    // the `WorkSpace`.
+    fn build_workspace_ignore_list(config: &Config) -> Vec<String> {
         match config
             .manifest()
             .and_then(|m| m.workspace_config().and_then(|ws| ws.ignore()))
@@ -64,6 +84,8 @@ impl WorkSpace {
         }
     }
 
+    // Returns the name of the workspace if it exists; otherwise, the workspace
+    // name is derived from the current working directory's top-level directory.
     fn get_workspace_name(config: &Config) -> String {
         const DEFAULT_TOML_NAME: &str = "name of workspace";
 
@@ -90,6 +112,26 @@ impl WorkSpace {
             }
         }
     }
+
+    fn values_from_args(args: &ArgMatches) -> (Mode, Vec<String>) {
+        (
+            flag(&args),
+            values_of("contents", &args).map_or(vec![], |v| v),
+        )
+    }
+
+    fn values_from_config(config: &Config) -> (String, Vec<String>) {
+        (
+            WorkSpaceBuilder::get_workspace_name(&config),
+            WorkSpaceBuilder::build_workspace_ignore_list(&config),
+        )
+    }
+
+    fn args_to_paths(config: &Config, args: Vec<String>) -> Vec<PathBuf> {
+        let ws_path_names = strip(&args);
+        let ws_paths = check(config.cwd(), ws_path_names);
+        return to_abs_path(config.cwd(), ws_paths);
+    }
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -99,6 +141,7 @@ enum Mode {
     Normal,
 }
 
+// Collects `names` that can be considered valid paths.
 fn check<P>(cwd: P, names: Vec<String>) -> Vec<String>
 where
     P: AsRef<Path>,
@@ -109,6 +152,7 @@ where
         .collect()
 }
 
+// A `name` is valid if it exists within the current Bifrost realm.
 fn is_valid<P>(cwd: P, name: &str) -> BifrostResult<bool>
 where
     P: AsRef<Path>,
@@ -124,6 +168,7 @@ where
     Ok(false)
 }
 
+// Returns `names` without trailing slashes.
 fn strip(names: &Vec<String>) -> Vec<String> {
     let mut names_without_trailing_slashes: Vec<String> = Vec::new();
     for n in names {
@@ -132,6 +177,7 @@ fn strip(names: &Vec<String>) -> Vec<String> {
     names_without_trailing_slashes
 }
 
+// Returns a `name` without any trailing slashes.
 fn strip_trailing_slash(name: &str) -> &str {
     if name.len() > 1 && name.ends_with("\\") || name.ends_with("/") {
         return &name[..name.len() - 1];
@@ -139,6 +185,8 @@ fn strip_trailing_slash(name: &str) -> &str {
     name
 }
 
+// Converts `name`d strings to `PathBuf`s if and only if the name is contained
+// within a `PathBuf` that resides in the current working directory.
 fn to_abs_path<P>(cwd: P, paths: Vec<String>) -> Vec<PathBuf>
 where
     P: AsRef<Path>,
@@ -170,49 +218,4 @@ fn flag(args: &ArgMatches) -> Mode {
 #[derive(Debug)]
 pub struct BifrostPath {
     path: PathBuf,
-}
-
-impl BifrostPath {
-    fn new<P: AsRef<Path>>(path: P, config: &Config) -> Self {
-        if let Ok(bfp) = BifrostPath::check(path) {
-            let home_path = config.home_path();
-            let bifrost_dir = home_path.join(".bifrost");
-            let bifrost_container = bifrost_dir.join("container");
-            let path = bifrost_container.join(bfp.path);
-            return BifrostPath { path };
-        }
-        unimplemented!()
-    }
-
-    fn check<P: AsRef<Path>>(path: P) -> BifrostResult<Self> {
-               let black_list = [
-            ".bifrost",
-            "bifrost",
-            ".config",
-            "config",
-            "container",
-            "dockerfile",
-            "Dockerfile",
-            "test",
-            "tmp",
-        ];
-
-        match path.as_ref().file_name().and_then(|p| p.to_str()) {
-            Some(s) => {
-                if black_list.contains(&s) || s.starts_with(".") {
-                    failure::bail!(
-                        "error: cannot create proposed path {} because it
-                    conflicts with one of the following: {:?}",
-                        s,
-                        black_list
-                    )
-                } else {
-                    return Ok(BifrostPath {
-                        path: path.as_ref().to_path_buf(),
-                    });
-                }
-            }
-            None => failure::bail!("error: cannot verify proposed path, path may have been empty"),
-        } 
-    }
 }

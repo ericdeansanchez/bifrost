@@ -1,6 +1,7 @@
 //! Implementation details of the `init` subcommand.
 use std::fs;
 use std::io::{self, Write};
+use std::process;
 
 use crate::core::config::Config;
 use crate::core::hofund;
@@ -46,7 +47,9 @@ cmd = ["command string(s)"]
 "#;
 
     if fs::metadata(&config.cwd().join("Bifrost.toml")).is_ok() {
-        failure::bail!("error: `bifrost init` cannot be run on an existing Bifrost realm")
+        io::stderr()
+            .write("error: `bifrost init` cannot be run on an existing Bifrost realm".as_bytes())?;
+        process::exit(1);
     }
 
     let success = |p: &std::path::PathBuf| -> BifrostResult<()> {
@@ -61,7 +64,7 @@ cmd = ["command string(s)"]
         hofund::write(&config.cwd().join("Bifrost.toml"), &toml.as_bytes())?;
         success(config.cwd())?;
     } else {
-        let config = config.config_manifest(&args);
+        let config = config.init_manifest(&args);
         let toml = match &config.manifest() {
             Some(s) => match s.to_str() {
                 Ok(s) => s,
@@ -71,13 +74,11 @@ cmd = ["command string(s)"]
                          to string due to `{}` used default instead",
                         e
                     ))?;
-
                     String::from(toml)
                 }
             },
             None => String::from(toml),
         };
-
         hofund::write(&config.cwd().join("Bifrost.toml"), toml.as_bytes())?;
         success(config.cwd())?;
     }

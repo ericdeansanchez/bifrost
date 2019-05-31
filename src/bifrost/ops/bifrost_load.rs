@@ -6,10 +6,9 @@ use crate::util::BifrostResult;
 use crate::ArgMatches;
 
 pub fn load(config: Config, args: &ArgMatches) -> BifrostResult<()> {
-    if args.is_present("contents") {
-        let ws = WorkSpace::init(config, &args);
-        println!("{:#?}", ws);
-    }
+    let ws = WorkSpace::init(config, &args);
+    println!("{:#?}", args);
+    println!("{:#?}", ws);
     Ok(())
 }
 

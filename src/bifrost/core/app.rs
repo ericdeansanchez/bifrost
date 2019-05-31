@@ -145,9 +145,11 @@ fn arg_load_contents(args: &mut Vec<Arg>) {
                         bifrost container";
 
     let a = Arg::with_name("contents")
-        .multiple(true)
         .help(LONG)
-        .long_help(LONG);
+        .long("contents")
+        .long_help(LONG)
+        .takes_value(true)
+        .multiple(true);
 
     args.push(a);
 }
