@@ -1,4 +1,18 @@
+//! Implementation details of the `load` subcommand.
 
+use crate::core::config::Config;
+use crate::core::workspace::WorkSpace;
+use crate::util::BifrostResult;
+use crate::ArgMatches;
+
+pub fn load(config: Config, args: &ArgMatches) -> BifrostResult<()> {
+    let ws = WorkSpace::init(config, &args);
+    println!("{:#?}", args);
+    println!("{:#?}", ws);
+    Ok(())
+}
+
+/*
 fn load<P>(wd: &mut WorkingDir, to: P) -> Result<u64>
     where
         P: AsRef<Path>,
@@ -71,3 +85,4 @@ fn load_files<P>(parent: &str, wd: &WorkingDir, to: P) -> Result<u64>
 fn unload(path: UnloadPath) -> Result<()> {
     unimplemented!();
 }
+*/

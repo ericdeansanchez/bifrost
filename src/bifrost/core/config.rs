@@ -2,7 +2,8 @@
 use serde_derive::{Deserialize, Serialize};
 use std::env;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
+use std::process;
 
 use crate::core::hofund;
 use crate::util::BifrostResult;
@@ -50,6 +51,19 @@ impl Default for Config {
 }
 
 impl Config {
+    pub fn init_manifest(self, args: &ArgMatches) -> Self {
+        Config {
+            home_path: self.home_path.clone(),
+            cwd: self.cwd.clone(),
+            manifest: match self.manifest {
+                None => Some(BifrostManifest::new(&args)),
+                Some(m) => {
+                    eprintln!("BUG: reinitializing manifest {:#?}", m);
+                    process::exit(1);
+                }
+            },
+        }
+    }
     /// Configures a `Config` with a new manifest.
     ///
     /// Consumes the current `Config` to promote a new state in which an updated
@@ -65,11 +79,11 @@ impl Config {
     /// arguments that may have been passed.
     pub fn config_manifest(self, args: &ArgMatches) -> Self {
         Config {
-            home_path: self.home_path,
-            cwd: self.cwd,
+            home_path: self.home_path.clone(),
+            cwd: self.cwd.clone(),
             manifest: match self.manifest {
-                None => BifrostManifest::from_only(&args),
-                Some(m) => m.combine_with(&args),
+                None => Some(BifrostManifest::bifrost_manifest_or_bust(self, &args)),
+                Some(m) => Some(m.combine_with(&args)),
             },
         }
     }
@@ -130,6 +144,39 @@ cmd = ["command string"]
 }
 
 impl BifrostManifest {
+    /// Constructs a new manifest that is the result of combining a default
+    /// manifest with `clap::ArgMatches` if they exist. Otherwise, the default
+    /// manifest is returned.
+    pub fn new(args: &ArgMatches) -> Self {
+        if args.args.is_empty() {
+            return BifrostManifest::default();
+        }
+        return BifrostManifest::default().combine_with(&args);
+    }
+
+    fn bifrost_manifest_or_bust(config: Config, args: &ArgMatches) -> Self {
+        fn try_from_manifest(config: Config, args: &ArgMatches) -> BifrostResult<BifrostManifest> {
+            match BifrostManifest::from_manifest(&config) {
+                Ok(manifest) => {
+                    if args.args.is_empty() {
+                        return Ok(manifest);
+                    } else {
+                        return Ok(manifest.combine_with(&args));
+                    }
+                }
+                Err(e) => failure::bail!("error: not a Bifrost realm{}", e),
+            }
+        }
+
+        match try_from_manifest(config, &args) {
+            Ok(manifest) => manifest,
+            Err(e) => {
+                eprintln!("{}", e);
+                process::exit(1);
+            }
+        }
+    }
+
     /// Constructs a `BifrostManifest` from an existing Bifrost.toml manifest file.
     ///
     /// # Errors
@@ -144,7 +191,16 @@ impl BifrostManifest {
 
         if fs::metadata(&cwd.join("Bifrost.toml")).is_err() {
             failure::bail!(
-                "error: could not find `Bifrost.toml` with the current working directory"
+                "--could not find `Bifrost.toml`
+       within the current working directory.
+
+note: a Bifrost realm must be intialized before use.
+
+try:
+
+    bifrost init
+
+"
             )
         }
 
@@ -165,7 +221,7 @@ impl BifrostManifest {
     /// fields passed as `clap::ArgMatches` (if they exist). Only fields that
     /// were explicitly passed will be replaced; otherwise, the `BifrostManifest`'s
     /// fields will contain its previously owned values.
-    pub fn combine_with(mut self, args: &ArgMatches) -> Option<Self> {
+    pub fn combine_with(mut self, args: &ArgMatches) -> Self {
         self.project = match value_of("project", &args) {
             None => self.project,
             Some(p) => Some(ProjectConfig { name: Some(p) }),
@@ -177,7 +233,16 @@ impl BifrostManifest {
         };
 
         self.workspace = match value_of("workspace", &args) {
-            None => self.workspace,
+            None => match values_of("ignore", &args) {
+                None => self.workspace,
+                Some(ig) => {
+                    let mut list: Vec<String> = vec![];
+                    for i in ig {
+                        list.push(i);
+                    }
+                    Some(WorkSpaceConfig::new("name of workspace", list))
+                }
+            },
             Some(ws) => {
                 let ignore = match values_of("ignore", &args) {
                     None => self.workspace.unwrap().ignore,
@@ -195,7 +260,7 @@ impl BifrostManifest {
             Some(c) => Some(CommandConfig { cmd: Some(c) }),
         };
 
-        Some(self)
+        self
     }
 
     /// Constructs a `BifrostManifest` from _only_ command line arguments.
@@ -204,8 +269,8 @@ impl BifrostManifest {
     /// command line argument that is present in the `clap::ArgMatches`.
     ///
     /// Each field that is not present is constructed with default arguments.
-    pub fn from_only(args: &ArgMatches) -> Option<Self> {
-        Some(BifrostManifest {
+    pub fn from_only(args: &ArgMatches) -> Self {
+        BifrostManifest {
             project: match value_of("project", &args) {
                 None => Some(ProjectConfig::new("project name")),
                 Some(p) => Some(ProjectConfig::new(&p)),
@@ -242,7 +307,7 @@ impl BifrostManifest {
                 None => Some(CommandConfig::new(vec![String::from("command string(s)")])),
                 Some(c) => Some(CommandConfig { cmd: Some(c) }),
             },
-        })
+        }
     }
 
     /// Returns a `BifrostResult`.
@@ -258,9 +323,14 @@ impl BifrostManifest {
             )),
         }
     }
+
+    /// Returns an optional reference to this manifest's `WorkSpaceConfig`.
+    pub fn workspace_config(&self) -> Option<&WorkSpaceConfig> {
+        self.workspace.as_ref()
+    }
 }
 
-fn value_of(arg: &str, from_args: &ArgMatches) -> Option<String> {
+pub fn value_of(arg: &str, from_args: &ArgMatches) -> Option<String> {
     if from_args.is_present(arg) {
         return from_args
             .value_of(arg)
@@ -269,7 +339,7 @@ fn value_of(arg: &str, from_args: &ArgMatches) -> Option<String> {
     None
 }
 
-fn values_of(arg: &str, from_args: &ArgMatches) -> Option<Vec<String>> {
+pub fn values_of(arg: &str, from_args: &ArgMatches) -> Option<Vec<String>> {
     if from_args.is_present(arg) {
         let values: Vec<&str> = from_args
             .values_of(arg)
@@ -307,7 +377,7 @@ impl ProjectConfig {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-struct WorkSpaceConfig {
+pub struct WorkSpaceConfig {
     name: Option<String>,
     ignore: Option<Vec<String>>,
 }
@@ -319,6 +389,14 @@ impl WorkSpaceConfig {
             ignore: Some(ignore),
         }
     }
+
+    pub fn name(&self) -> Option<&str> {
+        self.name.as_ref().map(|n| n.as_ref())
+    }
+
+    pub fn ignore(&self) -> Option<&Vec<String>> {
+        self.ignore.as_ref().map(|i| i.as_ref())
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -329,74 +407,6 @@ struct CommandConfig {
 impl CommandConfig {
     fn new(cmd: Vec<String>) -> Self {
         CommandConfig { cmd: Some(cmd) }
-    }
-}
-
-#[derive(Debug)]
-pub enum CommandOptions {
-    Load(LoadOptions),
-    Show(ShowOptions),
-    Run(RunOptions),
-    Unload(UnloadOptions),
-}
-
-#[derive(Debug)]
-pub struct LoadOptions {
-    src: PathBuf,
-    dst: BifrostPath,
-}
-
-#[derive(Debug)]
-pub struct ShowOptions {
-    path: BifrostPath,
-}
-
-#[derive(Debug)]
-pub struct RunOptions {
-    path: BifrostPath,
-}
-
-#[derive(Debug)]
-pub struct UnloadOptions {
-    path: BifrostPath,
-}
-
-#[derive(Debug)]
-pub struct BifrostPath {
-    path: PathBuf,
-}
-
-impl BifrostPath {
-    fn _new<P: AsRef<Path>>(path: P) -> BifrostResult<Self> {
-        let black_list = [
-            ".bifrost",
-            "bifrost",
-            ".config",
-            "config",
-            "container",
-            "dockerfile",
-            "Docker",
-            "Dockerfile",
-            "test",
-        ];
-
-        match path.as_ref().file_name().and_then(|p| p.to_str()) {
-            Some(s) => {
-                if black_list.contains(&s) || s.starts_with(".") {
-                    failure::bail!(
-                        "error: cannot create proposed path {} because it
-                    conflicts with one of the following: {:?}",
-                        s,
-                        black_list
-                    )
-                } else {
-                    return Ok(BifrostPath {
-                        path: path.as_ref().to_path_buf(),
-                    });
-                }
-            }
-            None => failure::bail!("error: cannot verify proposed path, path may have been empty"),
-        }
     }
 }
 
@@ -412,22 +422,100 @@ mod test {
     }
 
     #[test]
-    fn test_bifrost_manifest_from_manifest() {
-        pub fn from_manifest(path: &Path) -> BifrostResult<BifrostManifest> {
-            if fs::metadata(&path.join("TestBifrost.toml")).is_err() {
-                failure::bail!(
-                    "error: could not find `TestBifrost.toml` with the current working directory"
-                )
-            }
-            let s = hofund::read(&path.join("TestBifrost.toml"))?;
-            match toml::from_str(&s) {
-                Ok(b) => Ok(b),
-                Err(e) => failure::bail!(
-                    "error: could not serialize `Bifrost.toml` from string due to {}",
-                    e
-                ),
-            }
-        }
-        assert!(from_manifest(Path::new("tests/test_user/test_app_dir")).is_ok());
+    fn test_from_manifest() {
+        // This reads the the Bifrost.toml manifest from the testing directory.
+        // This is meant to succeed and all values are within the toml file are
+        // meant to be present. If this test fails, then it could be that the
+        // toml file was corrupted or modified.
+        let mut config = Config::default();
+        config.cwd = PathBuf::from("tests")
+            .join("test_user")
+            .join("test_app_dir");
+
+        let manifest = BifrostManifest::from_manifest(&config);
+        assert!(manifest.is_ok());
+
+        // The manifest exists and it is safe to unwrap.
+        let msg = "BUG: manifest `is_ok` but";
+        let manifest = manifest.unwrap();
+        let left = String::from("project name");
+        assert_eq!(
+            left,
+            *manifest
+                .project
+                .as_ref()
+                .expect(&format!(
+                    "{} {}",
+                    msg, "`ProjectConfig` cannot be unwrapped"
+                ))
+                .name
+                .as_ref()
+                .expect(&format!(
+                    "{} {}",
+                    msg, "`ProjectConfig::name` cannot be unwrapped"
+                ))
+        );
+
+        let left = String::from("docker");
+        assert_eq!(
+            left,
+            *manifest
+                .container
+                .as_ref()
+                .expect(&format!(
+                    "{} {}",
+                    msg, "`ContainerConfig` cannot be unwrapped"
+                ))
+                .name
+                .as_ref()
+                .expect(&format!(
+                    "{} {}",
+                    msg, "`ContainerConfig::name` cannot be unwrapped"
+                ))
+        );
+
+        let ws_config = manifest.workspace_config().expect(&format!(
+            "{} {}",
+            msg, "`BifrostManifest::workspace_config` cannot be unwrapped"
+        ));
+
+        let left = "name of workspace";
+        assert_eq!(
+            left,
+            ws_config.name.as_ref().expect(&format!(
+                "{} {}",
+                msg, "`WorkSpaceConfig::name` cannot be unwrapped"
+            ))
+        );
+
+        let left = vec![
+            String::from("target"),
+            String::from(".git"),
+            String::from(".gitignore"),
+        ];
+
+        assert_eq!(
+            &left,
+            ws_config.ignore.as_ref().expect(&format!(
+                "{} {}",
+                msg, "`WorkSpaceConfig::ignore` cannot be unwrapped"
+            ))
+        );
+
+        let left = vec![String::from("command string(s)")];
+        assert_eq!(
+            left,
+            manifest
+                .command
+                .expect(&format!(
+                    "{} {}",
+                    msg, "`CommandConfig` cannot be unwrapped"
+                ))
+                .cmd
+                .expect(&format!(
+                    "{} {}",
+                    msg, "`CommandConfig::cmd` cannot be unwrapped"
+                ))
+        );
     }
 }

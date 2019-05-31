@@ -53,6 +53,6 @@ mod test {
 
     #[test]
     fn test_read_success() {
-        assert!(read(Path::new("tests/test_user/test_app_dir/TestBifrost.toml")).is_ok());
+        assert!(read(Path::new("tests/test_user/test_app_dir/Bifrost.toml")).is_ok());
     }
 }

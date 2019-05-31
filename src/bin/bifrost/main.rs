@@ -12,6 +12,9 @@ fn main() -> BifrostResult<()> {
         ("init", Some(arg_matches)) => {
             commands::init::exec(Config::default(), arg_matches)?;
         }
+        ("load", Some(arg_matches)) => {
+            commands::load::exec(Config::default(), arg_matches)?;
+        }
         _ => {
             println!("{}", bifrost::util::template::EXPLICIT_LONG_HELP);
         }
