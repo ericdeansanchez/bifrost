@@ -1,3 +1,4 @@
+//! Executes `bifrost init`.
 use bifrost::core::config::Config;
 use bifrost::ops::bifrost_init;
 use bifrost::util::BifrostResult;

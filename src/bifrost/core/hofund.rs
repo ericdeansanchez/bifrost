@@ -2,18 +2,22 @@
 //!
 //! ## Hofund
 //! Hofund is the sword Heimdallr uses to open the Bifrost.
+//! Here, it is the name of a module that was hard to name. Hofund, is more fun
+//! than `util` or `bifrost_io` or something like that.
 use std::fs::{self, File, OpenOptions};
 use std::io::Write;
 use std::path::Path;
 
 use crate::util::BifrostResult;
 
+/// Write the contents to the given `path`.
 pub fn write(path: &Path, contents: &[u8]) -> BifrostResult<()> {
     let mut f = File::create(path)?;
     f.write_all(contents)?;
     Ok(())
 }
 
+/// Writes the contents to the given `path` in "append mode".
 pub fn append(path: &Path, contents: &[u8]) -> BifrostResult<()> {
     let mut f = OpenOptions::new()
         .write(true)
@@ -24,6 +28,7 @@ pub fn append(path: &Path, contents: &[u8]) -> BifrostResult<()> {
     Ok(())
 }
 
+/// Removes a single file specified by `path`.
 pub fn remove_file(path: &Path) -> BifrostResult<()> {
     match fs::remove_file(path) {
         Ok(()) => Ok(()),
@@ -31,6 +36,7 @@ pub fn remove_file(path: &Path) -> BifrostResult<()> {
     }
 }
 
+/// Reads a file from the given `path`.
 pub fn read(path: &Path) -> BifrostResult<String> {
     match fs::read_to_string(path) {
         Ok(s) => Ok(s),

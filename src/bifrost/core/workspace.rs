@@ -1,3 +1,4 @@
+//! Primary structures, mehtods, and functions that support `bifrost::ops`.
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process;
@@ -7,15 +8,29 @@ use crate::core::working_dir::WorkingDir;
 use crate::util::BifrostResult;
 use crate::ArgMatches;
 
+/// Primary structure which `bifrost::ops operate upon.
+///
+/// A `WorkSpace` is composed of the following:
+/// * name - the name of a realm's `WorkSpace`.
+/// * mode - describes how `contents` of this `WorkSpace` should be handled.
+/// * config - a [`Config`](struct.Config.html)
+/// * contents - an `Option<Vec<WorkingDir>>`, see [`WorkingDir`](struct.WorkingDir.html)
 #[derive(Debug)]
 pub struct WorkSpace {
+    // name of workspace that helps keep track of multiple `WorkSpace`'s.
     name: Option<String>,
+    // mode describing _how_ and/or _which_ operations should be performed.
     mode: Mode,
+    // configuration information that describes the current Bifrost realm.
     config: Config,
+    // contents of the `WorkSpace` in the form of `WorkingDir`s.
     contents: Option<Vec<WorkingDir>>,
+    // a `BifrostPath` which is a light wrapper around a `PathBuf`.
     bifrost_path: Option<BifrostPath>,
 }
 
+/// A default `WorkSpace` is constructed with a default `Config` in `Mode::Normal`.
+/// All other fields are `None`.
 impl Default for WorkSpace {
     fn default() -> Self {
         WorkSpace {
@@ -31,7 +46,7 @@ impl Default for WorkSpace {
 impl WorkSpace {
     /// Initializes a `WorkSpace` from a `Config` and `clap::ArgMatches`. If no
     /// contents were specified, then `ws_args` will be empty. When `ws_args` is
-    /// empty the default behavior is to construct this `WorkSpace`s contents from
+    /// empty the default behavior is to construct this `WorkSpace`'s contents from
     /// the current working directory.
     ///
     /// If arguments were passed (i.e. through `$ bifrost load --contents main.c`),
@@ -113,6 +128,8 @@ impl WorkSpaceBuilder {
         }
     }
 
+    // Convenience function that gets the `Mode` flag and the `contents` from
+    // command line arguments.
     fn values_from_args(args: &ArgMatches) -> (Mode, Vec<String>) {
         (
             flag(&args),
@@ -120,6 +137,8 @@ impl WorkSpaceBuilder {
         )
     }
 
+    // Convenience function that gets the name of the workspace and the `ignore_list`
+    // from a `Config`.
     fn values_from_config(config: &Config) -> (String, Vec<String>) {
         (
             WorkSpaceBuilder::get_workspace_name(&config),
@@ -127,6 +146,10 @@ impl WorkSpaceBuilder {
         )
     }
 
+    // Convenience function that `strip`s trailing slashes from command line arguments,
+    // `check`s if the current working directory has paths that contain these arguments,
+    // and then returns absolute-path-versions of these arguments.
+    // More validation may need to be done; this is a naive implementation.
     fn args_to_paths(config: &Config, args: Vec<String>) -> Vec<PathBuf> {
         let ws_path_names = strip(&args);
         let ws_paths = check(config.cwd(), ws_path_names);
@@ -206,6 +229,7 @@ where
     abs_paths
 }
 
+// Returns the `Mode` flag.
 fn flag(args: &ArgMatches) -> Mode {
     if args.is_present("auto") {
         return Mode::Auto;
@@ -215,6 +239,14 @@ fn flag(args: &ArgMatches) -> Mode {
     Mode::Normal
 }
 
+/// A light wrapper around a `PathBuf`. This structure exists to deter improper
+/// command execution. That is, `bifrost::ops` require target paths to be `BifrostPath`s
+/// in order to prevent operations from being performed on arbitrary `PathBuf`s.
+///
+/// For example, it should not be possible for a user to remove their entire
+/// home directory (or another arbitrary directory). Moreover, the goal of `BifrostPath`
+/// is to validate and enforce invariants on paths that `load`, `unload`, and
+/// `show` will use as targets.
 #[derive(Debug)]
 pub struct BifrostPath {
     path: PathBuf,

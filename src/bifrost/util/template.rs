@@ -1,4 +1,4 @@
-// Main application template.
+//! Main application templates and other stringly things.
 pub const APP_TEMPLATE: &str = "
 
     ____  _ ____                __
