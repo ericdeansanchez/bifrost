@@ -13,15 +13,23 @@ use dirs;
 use failure;
 
 /// Primary configuration structure for Bifrost realms.
+///
+/// A `Config` carries the necessary information a Bifrost realm needs to
+/// carry out `bifrost::ops`. It is composed of the following:
+/// * `home_path` - a `PathBuf` to a user's home directory.
+/// * `cwd` - a `PathBuf` to a user's current working directory.
+/// * `manifest` - a `BifrostManifest` constructed from a `Bifrost.toml` file and `clap::ArgMatches`
 #[derive(Debug)]
 pub struct Config {
     /// Absolute path to a user's home directory.
     home_path: PathBuf,
     /// Absolute path to a user's current working directory.
     cwd: PathBuf,
-    /// The Bifrost manifest containing workspace configuration information.
-    /// This structure can be constructed either `from_only` `ArgMatches` or from
-    /// another Bifrost.toml manifest.
+    /// The Bifrost manifest contains workspace configuration information.
+    /// This structure can be constructed
+    /// * `from_only` `ArgMatches` or
+    /// * another Bifrost.toml manifest or
+    /// * the combination of `ArgMatches` and `BifrostManifest`
     manifest: Option<BifrostManifest>,
 }
 
@@ -29,7 +37,7 @@ pub struct Config {
 ///
 /// # Panics
 ///
-/// This function panics if either of the following fail:
+/// The `default` function panics if either of the following fail:
 ///
 /// * `dirs::home_dir()`
 /// * `env::current_dir()`
@@ -51,6 +59,11 @@ impl Default for Config {
 }
 
 impl Config {
+    /// Initializes this `Config`s manifest. This method differs from `Config::config_manifest`
+    /// in that it expects `self.manifest` to be `None`. In this case, this method
+    /// returns a new `BifrostManifest` which is either a default or a default
+    /// combined with any valid command line arguments that were passed. This method
+    /// should only be called in `bifrost_init::init`.
     pub fn init_manifest(self, args: &ArgMatches) -> Self {
         Config {
             home_path: self.home_path.clone(),
@@ -58,31 +71,36 @@ impl Config {
             manifest: match self.manifest {
                 None => Some(BifrostManifest::new(&args)),
                 Some(m) => {
-                    eprintln!("BUG: reinitializing manifest {:#?}", m);
+                    eprintln!(
+                        "BUG: reinitializing manifest {:#?} `manifest` \
+                         was Some prior to intialization",
+                        m
+                    );
                     process::exit(1);
                 }
             },
         }
     }
-    /// Configures a `Config` with a new manifest.
+
+    /// Configures a `Config` with a new manifest. Consumes the current `Config`
+    /// to promote a new state in which an updated manifest is constructed from either:
     ///
-    /// Consumes the current `Config` to promote a new state in which an updated
-    /// manifest is constructed from either:
+    /// * `BifrostManifest::manifest_or_bust` or
+    /// * [`BifrostManifest::combine_with`](struct.BifrostManifest.html#method.combine_with),
+    /// which constructs a manifest from the combination of values from an existing
+    /// manifest and any command line arguments that may have been passed.
     ///
-    /// * `BifrostManifest::from_only`, which constructs a manifest from _only_
-    ///   arguments passed via the command line.
+    /// This method differs from [`Config::init_manifest`](struct.Config.html#method.init_manifest)
+    /// in that it will error and exit if the current working directory has not
+    /// been initialized as a Bifrost realm.
     ///
-    /// or
-    ///
-    /// * `BifrostManifest::combine_with`, which constructs a manifest from the
-    /// combination of values from an existing manifest and any command line
-    /// arguments that may have been passed.
+    /// Consequently, this method should only be called _after_ Bifrost-realm-initialization.
     pub fn config_manifest(self, args: &ArgMatches) -> Self {
         Config {
             home_path: self.home_path.clone(),
             cwd: self.cwd.clone(),
             manifest: match self.manifest {
-                None => Some(BifrostManifest::bifrost_manifest_or_bust(self, &args)),
+                None => Some(BifrostManifest::manifest_or_bust(self, &args)),
                 Some(m) => Some(m.combine_with(&args)),
             },
         }
@@ -116,7 +134,8 @@ pub struct BifrostManifest {
     command: Option<CommandConfig>,
 }
 
-/// Constructs the default `BifrostManifest`.
+/// Constructs a default `BifrostManifest` from a raw string literal.
+/// This string is then toml-fied via `toml::from_str`.
 impl Default for BifrostManifest {
     fn default() -> Self {
         let default_manifest = r#"[project]
@@ -154,7 +173,17 @@ impl BifrostManifest {
         return BifrostManifest::default().combine_with(&args);
     }
 
-    fn bifrost_manifest_or_bust(config: Config, args: &ArgMatches) -> Self {
+    /// Returns a valid manifest or prompts user with an error message and exits.
+    ///
+    /// First, an attempt is made to read the manifest within the current working
+    /// directory.
+    ///
+    /// If this operation succeeds, then the manifest is combined with
+    /// command line arguments (if they are present).
+    ///
+    /// Otherwise, this method `bail`s returning the error message to be displayed
+    /// to the user before exiting.
+    fn manifest_or_bust(config: Config, args: &ArgMatches) -> Self {
         fn try_from_manifest(config: Config, args: &ArgMatches) -> BifrostResult<BifrostManifest> {
             match BifrostManifest::from_manifest(&config) {
                 Ok(manifest) => {
@@ -164,7 +193,7 @@ impl BifrostManifest {
                         return Ok(manifest.combine_with(&args));
                     }
                 }
-                Err(e) => failure::bail!("error: not a Bifrost realm{}", e),
+                Err(e) => failure::bail!("error: not a valid Bifrost realm\n{}", e),
             }
         }
 
@@ -330,6 +359,7 @@ try:
     }
 }
 
+/// Light wrapper around `clap`s `value_of` method.
 pub fn value_of(arg: &str, from_args: &ArgMatches) -> Option<String> {
     if from_args.is_present(arg) {
         return from_args
@@ -339,6 +369,12 @@ pub fn value_of(arg: &str, from_args: &ArgMatches) -> Option<String> {
     None
 }
 
+/// Light wrapper around `clap`s `values_of` method.
+///
+/// # Panics
+///
+/// In the case where the given `arg` `is_present` but its values cannot be unwrapped
+/// this function pan
 pub fn values_of(arg: &str, from_args: &ArgMatches) -> Option<Vec<String>> {
     if from_args.is_present(arg) {
         let values: Vec<&str> = from_args

@@ -58,6 +58,10 @@ impl fmt::Debug for WorkingDir {
 }
 
 impl WorkingDir {
+    /// Constructs a new `WorkingDir` given an absolute path to a directory or
+    /// file. This path becomes the `root` of this `WorkingDir`. The `parent` of this
+    /// path is stored as well. The remaining fields are initialized with empty
+    /// collections.
     pub fn new<P: AsRef<Path>>(path: P) -> Self {
         let root = path.as_ref().to_path_buf();
         let parent = root.parent().map(|p| p.to_path_buf());
@@ -68,6 +72,8 @@ impl WorkingDir {
         }
     }
 
+    /// Stores a list of names to ignore for subsequent access. The actual filtering
+    /// does not occur until [`walk`](struct.WorkingDir.html#method.walk) is called.
     pub fn ignore<S>(mut self, list: &Vec<S>) -> Self
     where
         S: AsRef<str>,
@@ -78,6 +84,24 @@ impl WorkingDir {
         self
     }
 
+    /// Walks a directory (or file) beginning from the `root`. Utilizes the
+    /// `WalkDir` iterator and `self.ignore_list` so that walks will not descend
+    /// into unwanted directories (or dir-entries).
+    ///
+    /// The entries are handled in two different ways:
+    ///
+    /// ## Directories
+    ///
+    /// Directories are pushed onto a `BinaryHeap`; this heap a min-heap that
+    /// utilizes a directory's depth for ordering. This is so that when, for example,
+    /// this `WorkingDir` is copied/written to the Bifrost container, no recursion
+    /// occurs. Contents are written essentially in level-order so that there's no
+    /// attempt to create a child-directory before it's parent.
+    ///
+    /// ## Files
+    ///
+    /// Absolute paths, in the form of `PathBuf`s are pushed onto a vector.
+    ///
     pub fn walk(mut self) -> BifrostResult<Self> {
         let root = &self.root;
         let ignore_list = &self.ignore_list;
@@ -98,6 +122,9 @@ impl WorkingDir {
     }
 }
 
+/// Light-ish wrapper around a `walkdir::DirEntry`. It is used to get access
+/// to an entries depth. Since Rust's `BinaryHeap` is a max-heap, the ordering
+/// on this type needs to be inverted to get min-heap behavior out of this collection.
 #[derive(Debug)]
 struct DirEntryExt(DirEntry);
 

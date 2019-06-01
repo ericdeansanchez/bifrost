@@ -5,10 +5,11 @@ use crate::core::workspace::WorkSpace;
 use crate::util::BifrostResult;
 use crate::ArgMatches;
 
+/// Loads a Bifrost Workspace. Utilizes `Config` and `ArgMatches` to construct
+/// a `WorkSpace`. This workspace is then loaded to the target directory specified
+/// by a `BifrostPath`. Here, **load** is synonymous with **copy**.
 pub fn load(config: Config, args: &ArgMatches) -> BifrostResult<()> {
     let ws = WorkSpace::init(config, &args);
-    println!("{:#?}", args);
-    println!("{:#?}", ws);
     Ok(())
 }
 
