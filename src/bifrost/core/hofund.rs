@@ -10,7 +10,7 @@ use std::path::Path;
 
 use crate::util::BifrostResult;
 
-/// Write the contents to the given `path`.
+/// Writes the contents to the given `path`.
 pub fn write(path: &Path, contents: &[u8]) -> BifrostResult<()> {
     let mut f = File::create(path)?;
     f.write_all(contents)?;
