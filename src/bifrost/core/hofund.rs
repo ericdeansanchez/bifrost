@@ -10,7 +10,7 @@ use std::path::Path;
 
 use crate::util::BifrostResult;
 
-/// Write the contents to the given `path`.
+/// Writes the contents to the given `path`.
 pub fn write(path: &Path, contents: &[u8]) -> BifrostResult<()> {
     let mut f = File::create(path)?;
     f.write_all(contents)?;
@@ -51,6 +51,7 @@ pub fn read(path: &Path) -> BifrostResult<String> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use std::path::PathBuf;
 
     #[test]
     fn test_read_failure() {
@@ -59,6 +60,70 @@ mod test {
 
     #[test]
     fn test_read_success() {
-        assert!(read(Path::new("tests/test_user/test_app_dir/Bifrost.toml")).is_ok());
+        let from = PathBuf::from("tests")
+            .join("test_user")
+            .join("test_app_dir")
+            .join("Bifrost.toml");
+        assert!(read(from.as_ref()).is_ok());
+    }
+
+    #[test]
+    fn test_write() {
+        let path = PathBuf::from("tests")
+            .join("test_user")
+            .join("test_app_dir")
+            .join("test_write.txt");
+
+        assert!(write(&path, "testing... 1.. 2.. 3..".as_bytes()).is_ok());
+        remove_file(&path).expect("`test_write` failed to `hofund::remove_file`");
+    }
+
+    #[test]
+    fn test_append() {
+        let path = PathBuf::from("tests")
+            .join("test_user")
+            .join("test_app_dir")
+            .join("test_append.txt");
+
+        let bytes = "testing... 1.. 2.. 3..\n".as_bytes();
+        write(&path, &bytes).expect("`test_append` failed to `hofund::write`");
+
+        assert!(append(&path, &bytes).is_ok());
+
+        let left = "testing... 1.. 2.. 3..\ntesting... 1.. 2.. 3..\n".as_bytes();
+        let middle = read(&path).expect("`test_append` failed to `hofund::read`");
+        let right = middle.as_bytes();
+        assert_eq!(left, right);
+        remove_file(&path).expect("`test_append` failed to `hofund::remove` test file");
+    }
+
+    #[test]
+    fn test_read() {
+        let path = PathBuf::from("tests")
+            .join("test_user")
+            .join("test_app_dir")
+            .join("test_read.txt");
+
+        let left = "testing... 1.. 2.. 3..\n".as_bytes();
+        write(&path, &left).expect("`test_read` failed to `hofund::write`");
+
+        let right = read(&path);
+        assert!(right.is_ok());
+        assert_eq!(left, right.unwrap().as_bytes());
+
+        remove_file(&path).expect("`test_read` failed to `hofund::read`");
+        assert!(read(&path).is_err());
+    }
+
+    #[test]
+    fn test_remove_file() {
+        let path = PathBuf::from("tests")
+            .join("test_user")
+            .join("test_app_dir")
+            .join("test_remove_file.txt");
+        let bytes = "buffalo buffalo buffalo buffalo".as_bytes();
+        write(&path, &bytes).expect("`test_remove_file` failed to `hofund::write`");
+        assert!(remove_file(&path).is_ok());
+        assert!(read(&path).is_err());
     }
 }
