@@ -4,9 +4,10 @@ use std::collections::BinaryHeap;
 use std::collections::HashSet;
 use std::env;
 use std::fmt;
+use std::fs::{self, File};
 use std::path::{Path, PathBuf};
 
-use crate::util::BifrostResult;
+use crate::util::{BifrostPath, BifrostResult, OperationInfo};
 
 extern crate dirs;
 extern crate walkdir;
@@ -65,6 +66,7 @@ impl WorkingDir {
     pub fn new<P: AsRef<Path>>(path: P) -> Self {
         let root = path.as_ref().to_path_buf();
         let parent = root.parent().map(|p| p.to_path_buf());
+
         WorkingDir {
             root,
             parent,
@@ -101,7 +103,6 @@ impl WorkingDir {
     /// ## Files
     ///
     /// Absolute paths, in the form of `PathBuf`s are pushed onto a vector.
-    ///
     pub fn walk(mut self) -> BifrostResult<Self> {
         let root = &self.root;
         let ignore_list = &self.ignore_list;
@@ -120,13 +121,44 @@ impl WorkingDir {
         }
         Ok(self)
     }
+
+    /// Returns the `root` of this working directory.
+    pub fn root(&self) -> &Path {
+        self.root.as_path()
+    }
+
+    /// Returns the optional `parent` of this work directory.
+    pub fn parent(&self) -> Option<&PathBuf> {
+        self.parent.as_ref()
+    }
+
+    /// Returns a mutable reference to this `WorkingDir`'s underlying `dirs`.
+    /// This allows the `load` operation to avoid manual heap-traversal.
+    pub fn dirs_as_mut(&mut self) -> &mut BinaryHeap<DirEntryExt> {
+        &mut self.dirs
+    }
+
+    /// Tries to load this `WorkingDir` into the container to the target destination
+    /// specified by the `BifrostPath`.
+    pub fn load(&mut self, bifrost_path: BifrostPath) -> BifrostResult<OperationInfo> {
+        Ok(try_load(self, bifrost_path)?)
+    }
+}
+
+/// Filter function used to filter entries in the construction of the `WalkDir` iterator.
+fn ignorable(entry: &DirEntry, ignore_list: &HashSet<String>) -> bool {
+    entry
+        .file_name()
+        .to_str()
+        .map(|s| ignore_list.iter().any(|a| s.starts_with(a)))
+        .unwrap_or(false)
 }
 
 /// Light-ish wrapper around a `walkdir::DirEntry`. It is used to get access
-/// to an entries depth. Since Rust's `BinaryHeap` is a max-heap, the ordering
+/// to an entry's depth. Since Rust's `BinaryHeap` is a max-heap, the ordering
 /// on this type needs to be inverted to get min-heap behavior out of this collection.
 #[derive(Debug)]
-struct DirEntryExt(DirEntry);
+pub struct DirEntryExt(DirEntry);
 
 impl Eq for DirEntryExt {}
 
@@ -148,12 +180,93 @@ impl PartialEq for DirEntryExt {
     }
 }
 
-fn ignorable(entry: &DirEntry, ignore_list: &HashSet<String>) -> bool {
-    entry
-        .file_name()
-        .to_str()
-        .map(|s| ignore_list.iter().any(|a| s.starts_with(a)))
-        .unwrap_or(false)
+/// Tries to load the specified `WorkingDir` to the target destination specified by the `BifrostPath`.
+fn try_load(wd: &mut WorkingDir, bifrost_path: BifrostPath) -> BifrostResult<OperationInfo> {
+    Ok(OperationInfo {
+        bytes: Some(_load(wd, &bifrost_path)?),
+        name: String::from("default"),
+    })
+}
+
+/// Loads the specified `WorkingDir` to the target destination specified by the `BifrostPath` by:
+///
+/// * loading the top-level-directory, then
+/// * loading the remaining directories, and then
+/// * loading the files
+///
+/// Returns a `BifrostResult` containing the number of bytes written (or errors).
+fn _load(wd: &mut WorkingDir, to: &BifrostPath) -> BifrostResult<u64> {
+    let pb = wd
+        .parent()
+        .expect("BUG: `WorkingDir::parent` should not be `None` here")
+        .clone();
+    let parent = pb.to_str().expect(
+        "BUG: `bifrost_load::_load` failed to convert `WorkingDir::parent` `PathBuf` `to_str`",
+    );
+
+    // `dirs` will be empty after this if block.
+    if let Some(from) = wd.dirs_as_mut().pop() {
+        _load_top_level_dir(&parent, &from, &to)?;
+
+        while let Some(from) = wd.dirs_as_mut().pop() {
+            _load_dir(&parent, &from, &to)?;
+        }
+    }
+    return _load_files(&parent, &wd, &to);
+}
+
+/// Creates the top-level directory at its target destination. To construct the appropriate
+/// suffix to be adjoined to the `BifrostPath` the `parent` is stripped from the path of the
+/// dir-entry. The directory is created if and only if a destination suffix was able to be
+/// constructed.
+///
+/// # Example
+/// If the intent is to load `src`, then the process is conceptually as follows:
+///
+/// * from: /Users/username/project/src
+/// * to: /Users/username/.bifrost/container/project
+/// * parent: "/Users/username/project"
+/// * destination_suffix: "src"
+/// * target: /Users/username/.bifrost/container/project/src
+///
+/// # Note
+/// The example above is only meant to demonstrate the reasoning behind stripping
+/// prefixes from paths. It does not necessary indicate the actual behavior produced
+/// due to the nature of naming v.s. not-naming workspaces.
+fn _load_top_level_dir(parent: &str, from: &DirEntryExt, to: &BifrostPath) -> BifrostResult<()> {
+    let to_dir = from.0.path().clone();
+    if let Ok(destination_suffix) = to_dir.strip_prefix(parent) {
+        fs::create_dir_all(&to.path.join(destination_suffix))?;
+        return Ok(());
+    } else {
+        failure::bail!(
+            "error: `workingdir::_load_top_level_dir` failed to construct destination target"
+        );
+    }
+}
+
+/// Creates directories within the Bifrost container.
+fn _load_dir(parent: &str, from: &DirEntryExt, to: &BifrostPath) -> BifrostResult<()> {
+    let to_dir = from.0.path().clone();
+    if let Ok(to_dir) = to_dir.strip_prefix(parent) {
+        fs::create_dir_all(&to.path.join(to_dir))?;
+    }
+    Ok(())
+}
+
+/// Creates files within the Bifrost container and copies the contents from the
+/// workspace source files to the destination files created in the Bifrost container.
+fn _load_files(parent: &str, wd: &WorkingDir, to: &BifrostPath) -> BifrostResult<u64> {
+    let mut nbytes = 0;
+    for entry in &wd.files {
+        if let Ok(to) = entry.strip_prefix(parent).map(|e| to.path.join(e)) {
+            File::create(&to)?;
+            if let Ok(n) = fs::copy(entry, to) {
+                nbytes += n;
+            }
+        }
+    }
+    Ok(nbytes)
 }
 
 #[cfg(test)]
@@ -230,5 +343,10 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn test_propose_target_suffix() -> BifrostResult<()> {
+        Ok(())
     }
 }

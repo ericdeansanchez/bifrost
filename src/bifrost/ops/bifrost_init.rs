@@ -48,20 +48,43 @@ cmd = ["command string(s)"]
 
     if fs::metadata(&config.cwd().join("Bifrost.toml")).is_ok() {
         io::stderr().write(
-            "error: `bifrost init` cannot be run on an existing Bifrost realm\n".as_bytes(),
+            "error: `bifrost init` cannot be run on an existing bifrost realm\n".as_bytes(),
         )?;
         process::exit(1);
     }
 
     let success = |p: &std::path::PathBuf| -> BifrostResult<()> {
         io::stdout().write_fmt(format_args!(
-            "Initialized default Bifrost realm in {}\n",
+            "initialized default bifrost realm in {}\n",
             p.display()
         ))?;
         Ok(())
     };
 
     if args.args.is_empty() {
+        let name = config
+            .cwd()
+            .file_name()
+            .expect("msg: &str")
+            .to_str()
+            .expect("BUG: `bifrost::init` failed to convert cwd name `to_str`");
+        let toml: &str = &format!(
+            r#"[project]
+name = "project name"
+
+[container]
+name = "docker"
+
+[workspace]
+name = "{}"
+ignore = ["target", ".git", ".gitignore"]
+
+[command]
+cmd = ["command string(s)"]
+"#,
+            name
+        );
+
         hofund::write(&config.cwd().join("Bifrost.toml"), &toml.as_bytes())?;
         success(config.cwd())?;
     } else {
@@ -71,8 +94,8 @@ cmd = ["command string(s)"]
                 Ok(s) => s,
                 Err(e) => {
                     io::stderr().write_fmt(format_args!(
-                        "warn: failed to convert Bifrost manifest \
-                         to string due to `{}` used default instead",
+                        "warn: failed to convert bifrost manifest \
+                         to string due to `{}` ...used default instead",
                         e
                     ))?;
                     String::from(toml)

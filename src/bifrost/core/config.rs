@@ -19,7 +19,7 @@ use failure;
 /// * `home_path` - a `PathBuf` to a user's home directory.
 /// * `cwd` - a `PathBuf` to a user's current working directory.
 /// * `manifest` - a `BifrostManifest` constructed from a `Bifrost.toml` file and `clap::ArgMatches`
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
     /// Absolute path to a user's home directory.
     home_path: PathBuf,
@@ -42,7 +42,11 @@ pub struct Config {
 /// * `dirs::home_dir()`
 /// * `env::current_dir()`
 ///
-/// If either of these calls fail to provide an appropriate value then the program
+/// This function will also fail if the current working directory is found to be
+/// the home or root directory. In this case, `default` will panic if it cannot
+/// write to `io::stderr`.
+///
+/// If any of these calls fails to provide an appropriate value, then the program
 /// should terminate.
 impl Default for Config {
     fn default() -> Self {
@@ -50,6 +54,21 @@ impl Default for Config {
             dirs::home_dir().expect("error: `core::Config::default` could not configure home path");
         let cwd = env::current_dir()
             .expect("error: `core::Config::default` could not configure cwd path");
+
+        // Do not let users construct a Bifrost realm from within _THE_ Bifrost
+        // directory or the Bifrost container directory.
+        let bifrost_path = home_path.as_path().join(".bifrost");
+        let container_path = home_path.as_path().join(".bifrost").join("container");
+
+        if cwd == home_path
+            || cwd == PathBuf::from("/")
+            || cwd == bifrost_path
+            || cwd == container_path
+        {
+            eprintln!("error: cannot configure root directory as a Bifrost realm");
+            process::exit(1);
+        }
+
         Config {
             home_path,
             cwd,
@@ -374,7 +393,7 @@ pub fn value_of(arg: &str, from_args: &ArgMatches) -> Option<String> {
 /// # Panics
 ///
 /// In the case where the given `arg` `is_present` but its values cannot be unwrapped
-/// this function pan
+/// this function panics.
 pub fn values_of(arg: &str, from_args: &ArgMatches) -> Option<Vec<String>> {
     if from_args.is_present(arg) {
         let values: Vec<&str> = from_args
@@ -449,6 +468,12 @@ impl CommandConfig {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn test_default_config() {
+        // Ensure the default constructor does not panic.
+        let _ = Config::default();
+    }
 
     #[test]
     fn test_default_manifest() {
