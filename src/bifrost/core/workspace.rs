@@ -166,6 +166,13 @@ impl WorkSpaceArgs {
     }
 }
 
+/// Implementors of `BifrostOperable` are prep-able, build-able, and exec-utable.
+/// These methods are chainable and are used to execute `bifrost::ops`; successful
+/// execution returns a `BifrostResult` containing `OperationInfo` (or an error).
+/// 
+/// * `prep` - prepares the structure to be built
+/// * `build` - builds the prepared structure
+/// * `exec` - executes the structures primary function (e.g. `load` for `LoadSpace`, `show` for `ShowSpace`)
 pub trait BifrostOperable {
     /// Prepares implementor to be built.
     fn prep(&mut self) -> BifrostResult<&mut BifrostOperable>;
