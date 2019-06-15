@@ -1,0 +1,12 @@
+[project]
+name = "project name"
+
+[container]
+name = "docker"
+
+[workspace]
+name = "relic"
+ignore = ["target", ".git", ".gitignore", ".idea", "tests"]
+
+[command]
+cmd = ["command string"]
