@@ -65,15 +65,6 @@ fn sub_command_run(commands: &mut Vec<App>) {
     commands.push(s);
 }
 
-fn sub_command_show(commands: &mut Vec<App>) {
-    const ABOUT: &str = "Display files currently in the bifrost container";
-    const USAGE: &str = "bifrost show [OPTIONS]";
-
-    let s = SubCommand::with_name("show").about(ABOUT).usage(USAGE);
-
-    commands.push(s);
-}
-
 fn sub_command_unload(commands: &mut Vec<App>) {
     const ABOUT: &str = "Unload a workspace from the bifrost container";
     const USAGE: &str = "bifrost unload [OPTIONS]";
@@ -81,6 +72,70 @@ fn sub_command_unload(commands: &mut Vec<App>) {
     let s = SubCommand::with_name("unload").about(ABOUT).usage(USAGE);
 
     commands.push(s);
+}
+
+fn sub_command_show(commands: &mut Vec<App>) {
+    const ABOUT: &str = "Display files currently in the bifrost container";
+    const USAGE: &str = "bifrost show [OPTIONS]";
+
+    let mut s = SubCommand::with_name("show").about(ABOUT).usage(USAGE);
+
+    for a in all_show_args() {
+        s = s.arg(a);
+    }
+
+    commands.push(s);
+}
+
+fn all_show_args() -> Vec<Arg> {
+    let mut show_args: Vec<Arg> = vec![];
+    arg_show_all(&mut show_args);
+    arg_show_diff(&mut show_args);
+    show_args
+}
+
+fn arg_show_all(args: &mut Vec<Arg>) {
+    const SHORT: &str = "Show all contents of the current workspace realm.";
+    const LONG: &str = "
+When `all` is passed, `bifrost show` will display the entire
+contents of the current workspace realm. This command is
+similar to running the `ls` command on unix-like platforms.
+
+
+\t$ bifrost show --all
+
+
+";
+
+    let a = Arg::with_name("all")
+        .multiple(true)
+        .long("all")
+        .help(SHORT)
+        .long_help(LONG);
+
+    args.push(a);
+}
+
+fn arg_show_diff(args: &mut Vec<Arg>) {
+    const SHORT: &str = "Show contents that have been modified locally.";
+    const LONG: &str = "
+When `diff` is passed, `bifrost show` will display the contents 
+that have modified locally but have not been re-loaded into
+the Bifrost container realm.
+
+
+\t$ bifrost show --diff
+
+
+";
+
+    let a = Arg::with_name("diff")
+        .multiple(true)
+        .long("diff")
+        .help(SHORT)
+        .long_help(LONG);
+
+    args.push(a);
 }
 
 fn sub_command_load(commands: &mut Vec<App>) {

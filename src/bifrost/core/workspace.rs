@@ -1,11 +1,12 @@
 //! Primary structures, mehtods, and functions that facilitate `bifrost::ops`.
+use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process;
 
 use crate::core::config::{self, Config};
 use crate::core::workingdir::WorkingDir;
-use crate::util::{BifrostPath, BifrostResult, OperationInfo};
+use crate::util::{BifrostOptions, BifrostPath, BifrostResult, OperationInfo};
 use crate::ArgMatches;
 
 /// Primary structure which `bifrost::ops operate upon.
@@ -25,6 +26,8 @@ pub struct WorkSpace {
     config: Config,
     // Contents of the `WorkSpace` in the form of `WorkingDir`s.
     contents: Option<Vec<WorkingDir>>,
+    // The size (in bytes) of all files contained within contents.
+    size: u64,
 }
 
 /// A default `WorkSpace` is constructed with a default `Config` in `Mode::Normal`.
@@ -36,6 +39,7 @@ impl Default for WorkSpace {
             mode: Mode::Normal,
             config: Config::default(),
             contents: None,
+            size: 0u64,
         }
     }
 }
@@ -63,7 +67,12 @@ impl WorkSpace {
 
     /// Constructs a `LoadSpace`.
     pub fn to_load_space(config: Config, args: &ArgMatches) -> LoadSpace {
-        WorkSpaceArgs::parse(config, &args).to_load_space()
+        WorkSpaceArgs::parse_load(config, &args).to_load_space()
+    }
+
+    /// Constructs a `ShowSpace`.
+    pub fn to_show_space(config: Config, args: &ArgMatches) -> ShowSpace {
+        WorkSpaceArgs::parse_show(config, &args).to_show_space()
     }
 }
 
@@ -106,11 +115,12 @@ struct WorkSpaceArgs {
     config: Config,
     contents: Option<Vec<String>>,
     ignore_list: Vec<String>,
+    opts: Option<BifrostOptions>,
 }
 
 impl WorkSpaceArgs {
     /// Gets the mode, contents, name, and ignore_list from `ArgMatches` and a `Config`.
-    fn parse(config: Config, args: &ArgMatches) -> WorkSpaceArgs {
+    fn parse_load(config: Config, args: &ArgMatches) -> WorkSpaceArgs {
         let (ws_mode, ws_contents) = WorkSpaceBuilder::values_from_args(&args);
         let (ws_name, ws_ignore_list) = WorkSpaceBuilder::values_from_config(&config);
 
@@ -120,6 +130,22 @@ impl WorkSpaceArgs {
             config,
             contents: Some(ws_contents),
             ignore_list: ws_ignore_list,
+            opts: None,
+        }
+    }
+
+    // [DOC-ME]
+    fn parse_show(config: Config, args: &ArgMatches) -> WorkSpaceArgs {
+        let ws_mode = flag(&args);
+        let ws_opts = WorkSpaceBuilder::get_show_space_opts(&args);
+        let ws_name = WorkSpaceBuilder::get_workspace_name(&config);
+        WorkSpaceArgs {
+            name: Some(ws_name),
+            mode: ws_mode,
+            config,
+            contents: None,
+            ignore_list: vec![],
+            opts: ws_opts,
         }
     }
 
@@ -134,10 +160,10 @@ impl WorkSpaceArgs {
     /// Otherwise, a new `WorkSpace` is constructed with new `contents` of type `Vec<WorkingDir>`
     /// and a `LoadSpace` is returned.
     fn to_load_space(self) -> LoadSpace {
-        let mut workding_dirs: Vec<WorkingDir> = Vec::new();
+        let mut working_dirs: Vec<WorkingDir> = Vec::new();
         if let Some(contents) = self.contents {
             if contents.is_empty() {
-                workding_dirs.push(WorkingDir::new(self.config.cwd()).ignore(&self.ignore_list));
+                working_dirs.push(WorkingDir::new(self.config.cwd()).ignore(&self.ignore_list));
             } else {
                 let paths = WorkSpaceBuilder::args_to_paths(&self.config, contents, &is_loadable);
                 if paths.is_empty() {
@@ -149,7 +175,7 @@ impl WorkSpaceArgs {
                 }
 
                 for path in paths {
-                    workding_dirs.push(WorkingDir::new(path).ignore(&self.ignore_list));
+                    working_dirs.push(WorkingDir::new(path).ignore(&self.ignore_list));
                 }
             }
         }
@@ -159,9 +185,24 @@ impl WorkSpaceArgs {
                 name: self.name,
                 mode: self.mode,
                 config: self.config,
-                contents: Some(workding_dirs),
+                contents: Some(working_dirs),
+                size: 0u64,
             },
             bifrost_path: None,
+        }
+    }
+
+    fn to_show_space(self) -> ShowSpace {
+        ShowSpace {
+            workspace: WorkSpace {
+                name: self.name,
+                mode: self.mode,
+                config: self.config,
+                contents: None,
+                size: 0u64,
+            },
+            bifrost_path: None,
+            opts: self.opts,
         }
     }
 }
@@ -169,7 +210,7 @@ impl WorkSpaceArgs {
 /// Implementors of `BifrostOperable` are prep-able, build-able, and exec-utable.
 /// These methods are chainable and are used to execute `bifrost::ops`; successful
 /// execution returns a `BifrostResult` containing `OperationInfo` (or an error).
-/// 
+///
 /// * `prep` - prepares the structure to be built
 /// * `build` - builds the prepared structure
 /// * `exec` - executes the structures primary function (e.g. `load` for `LoadSpace`, `show` for `ShowSpace`)
@@ -180,23 +221,8 @@ pub trait BifrostOperable {
     fn build(&mut self) -> BifrostResult<&mut BifrostOperable>;
     /// Executes implementor's executive function(s).
     fn exec(&mut self) -> BifrostResult<OperationInfo>;
-}
-
-#[derive(Debug)]
-pub struct BaseSpace {}
-
-impl BifrostOperable for BaseSpace {
-    fn prep(&mut self) -> BifrostResult<&mut BifrostOperable> {
-        unimplemented!();
-    }
-
-    fn build(&mut self) -> BifrostResult<&mut BifrostOperable> {
-        unimplemented!();
-    }
-
-    fn exec(&mut self) -> BifrostResult<OperationInfo> {
-        unimplemented!();
-    }
+    /// Returns the operable `BifrostPath`.
+    fn bifrost_path(&self) -> Option<BifrostPath>;
 }
 
 /// Primary data structure used to `load` `WorkSpace`s into the Bifrost container.
@@ -228,11 +254,6 @@ impl LoadSpace {
         self.workspace.name()
     }
 
-    /// Returns a `clone`d version of the target `BifrostPath`.
-    pub fn bifrost_path(&self) -> Option<BifrostPath> {
-        self.bifrost_path.clone()
-    }
-
     /// Returns the underlying `WorkSpace`'s contents `as_mut`.
     pub fn contents_as_mut(&mut self) -> Option<&mut Vec<WorkingDir>> {
         self.workspace.contents.as_mut()
@@ -259,10 +280,12 @@ impl LoadSpace {
     /// it can be shown that `WorkSpace::default` is the only operation that
     /// produces a `WorkSpace` with a name that is `None`.
     pub fn load(&mut self) -> BifrostResult<OperationInfo> {
-        let mut nbytes = 0u64;
         let path = self
-            .bifrost_path()
+            .bifrost_path
+            .clone()
             .expect("BUG: `BifrostPath` should not be `None` here");
+
+        let mut nbytes = 0u64;
 
         // The contents must be mutable because loading a `WorkingDir`
         // mutates its underlying `dirs` field.
@@ -273,6 +296,10 @@ impl LoadSpace {
                     nbytes += n;
                 }
             }
+        }
+
+        if nbytes != self.workspace.size {
+            failure::bail!("error: could not `load` all contents");
         }
 
         // The name really should not be `None` at this point.
@@ -286,6 +313,7 @@ impl LoadSpace {
         Ok(OperationInfo {
             bytes: Some(nbytes),
             name,
+            text: None,
         })
     }
 }
@@ -318,7 +346,7 @@ impl BifrostOperable for LoadSpace {
     /// does not already exist. Reassigns `self.bifrost_path` if and only if the
     /// `BifrostPath` is unique.
     fn prep(&mut self) -> BifrostResult<&mut BifrostOperable> {
-        if self.bifrost_path().is_some() {
+        if self.bifrost_path.is_some() {
             failure::bail!("error: a `BifrostPath` has already been prepared for this `LoadSpace`");
         }
         self.bifrost_path = Some(BifrostPath::new(self.home_path(), self.name())?);
@@ -326,15 +354,19 @@ impl BifrostOperable for LoadSpace {
     }
 
     /// Builds a `LoadSpace` by calling `walk` on each underlying `WorkingDir` owned
-    /// by the workspace's contents. Reassigns `self.workspace.contents` if and only if
-    /// each `walk` was successful.
+    /// by the workspace's contents. Reassigns `self.workspace.contents` and reassigns
+    /// `self.workspace.size` if and only if each `walk` was successful.
     fn build(&mut self) -> BifrostResult<&mut BifrostOperable> {
         if let Some(contents) = self.workspace.contents.as_mut() {
+            let mut nybtes = 0u64;
             let mut walked_content: Vec<WorkingDir> = vec![];
             while let Some(entry) = contents.pop() {
                 let wd = entry.walk()?;
+                nybtes += wd.size();
                 walked_content.push(wd);
             }
+            // Update the `WorkSpace::size` now that directories have been walked.
+            self.workspace.size = nybtes;
             self.workspace.contents = Some(walked_content)
         }
         Ok(self)
@@ -343,6 +375,121 @@ impl BifrostOperable for LoadSpace {
     /// Executes a `LoadSpace`'s primary function: `load`.
     fn exec(&mut self) -> BifrostResult<OperationInfo> {
         Ok(self.load()?)
+    }
+
+    /// Returns a `clone`d version of the target `BifrostPath`.
+    fn bifrost_path(&self) -> Option<BifrostPath> {
+        self.bifrost_path.clone()
+    }
+}
+
+/// Primary data structure used to `show` `WorkSpace`s that exist within the
+/// Bifrost container.
+#[derive(Debug)]
+pub struct ShowSpace {
+    /// The `WorkSpace` to be loaded.
+    workspace: WorkSpace,
+    /// The target path to `load` the `WorkSpace` to.
+    bifrost_path: Option<BifrostPath>,
+    /// Options that control _how_ a `ShowSpace` is displayed.
+    opts: Option<BifrostOptions>,
+}
+
+impl ShowSpace {
+    /// Returns a reference to the underlying `home_path` `PathBuf` defined
+    /// upon configuration.
+    pub fn home_path(&self) -> &PathBuf {
+        self.workspace.config().home_path()
+    }
+
+    /// Returns a optional reference to the underlying `WorkSpace` name.
+    pub fn name(&self) -> Option<&String> {
+        self.workspace.name()
+    }
+
+    pub fn show(&self) -> BifrostResult<OperationInfo> {
+        if let Some(ref opts) = self.opts {
+            if opts.verbose {
+                return Ok(self.show_all()?);
+            }
+        }
+        return Ok(self.show_default()?);
+    }
+
+    pub fn show_default(&self) -> BifrostResult<OperationInfo> {
+        let mut op_info = OperationInfo::new();
+
+        if let Ok(current_dir) = env::current_dir() {
+            if let Some(ref bifrost_path) = self.bifrost_path {
+                env::set_current_dir(&bifrost_path.path)?;
+                let out = process::Command::new("ls")
+                    .arg("-lr")
+                    .output()
+                    .unwrap()
+                    .stdout;
+                op_info.text = Some(out);
+            }
+            env::set_current_dir(current_dir)?;
+        }
+
+        op_info.name = self
+            .name()
+            .expect("BUG: `ShowSpace::show_default` expected `self.name` to be `Some`")
+            .to_string();
+
+        Ok(op_info)
+    }
+
+    pub fn show_all(&self) -> BifrostResult<OperationInfo> {
+        let mut op_info = OperationInfo::new();
+
+        if let Ok(current_dir) = env::current_dir() {
+            if let Some(ref bifrost_path) = self.bifrost_path {
+                env::set_current_dir(&bifrost_path.path)?;
+                let out = process::Command::new("ls")
+                    .arg("-laR")
+                    .output()
+                    .unwrap()
+                    .stdout;
+                op_info.text = Some(out);
+            }
+            env::set_current_dir(current_dir)?;
+        }
+
+        op_info.name = self
+            .name()
+            .expect("BUG: `ShowSpace::show_all` expected `self.name` to be `Some`")
+            .to_string();
+
+        Ok(op_info)
+    }
+}
+
+impl BifrostOperable for ShowSpace {
+    fn prep(&mut self) -> BifrostResult<&mut BifrostOperable> {
+        let path = BifrostPath::try_from_existing(self.home_path(), self.name())?;
+        self.bifrost_path = Some(path);
+        Ok(self)
+    }
+
+    fn build(&mut self) -> BifrostResult<&mut BifrostOperable> {
+        if let Some(ref opts) = self.opts {
+            if opts.verbose {
+                return Ok(self);
+            } else if opts.diff {
+                println!("building for --diff (gotta write that diff-er now...)");
+            }
+        }
+
+        Ok(self)
+    }
+
+    fn exec(&mut self) -> BifrostResult<OperationInfo> {
+        Ok(self.show()?)
+    }
+
+    fn bifrost_path(&self) -> Option<BifrostPath> {
+        self.bifrost_path.clone()
     }
 }
 
@@ -390,6 +537,25 @@ impl WorkSpaceBuilder {
                 }
             }
         }
+    }
+
+    fn get_show_space_opts(args: &ArgMatches) -> Option<BifrostOptions> {
+        if args.args.is_empty() {
+            return None;
+        }
+
+        if args.is_present("all") {
+            return Some(BifrostOptions {
+                verbose: true,
+                ..Default::default()
+            });
+        } else if args.is_present("diff") {
+            return Some(BifrostOptions {
+                diff: true,
+                ..Default::default()
+            });
+        }
+        return None;
     }
 
     // Convenience function that gets the `Mode` flag and the `contents` from

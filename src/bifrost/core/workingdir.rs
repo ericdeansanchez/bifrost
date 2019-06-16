@@ -28,6 +28,8 @@ pub struct WorkingDir {
     /// Names of files and/or directories to `ignore` when
     /// `walk`ing this working directory.
     ignore_list: HashSet<String>,
+    /// The size of all files in this `WorkingDir`.
+    size: u64,
 }
 
 impl Default for WorkingDir {
@@ -42,6 +44,7 @@ impl Default for WorkingDir {
             dirs: BinaryHeap::new(),
             files: vec![],
             ignore_list: HashSet::new(),
+            size: 0,
         }
     }
 }
@@ -115,6 +118,11 @@ impl WorkingDir {
                 if entry.path().is_dir() {
                     self.dirs.push(DirEntryExt(entry));
                 } else if entry.path().is_file() {
+                    // Record the 'incoming' file sizes.
+                    self.size += fs::metadata(entry.path())
+                        .expect("error: `WorkingDir::walk` failed to unwrap `fs::metadata`")
+                        .len();
+
                     self.files.push(entry.into_path());
                 }
             }
@@ -130,6 +138,11 @@ impl WorkingDir {
     /// Returns the optional `parent` of this work directory.
     pub fn parent(&self) -> Option<&PathBuf> {
         self.parent.as_ref()
+    }
+
+    /// Returns the size of the `WorkingDir`.
+    pub fn size(&self) -> u64 {
+        self.size
     }
 
     /// Returns a mutable reference to this `WorkingDir`'s underlying `dirs`.
@@ -182,9 +195,16 @@ impl PartialEq for DirEntryExt {
 
 /// Tries to load the specified `WorkingDir` to the target destination specified by the `BifrostPath`.
 fn try_load(wd: &mut WorkingDir, bifrost_path: BifrostPath) -> BifrostResult<OperationInfo> {
+    let bytes = _load(wd, &bifrost_path)?;
+
+    if bytes != wd.size {
+        failure::bail!("error: `workingdir::try_load` failed to load entire `WorkingDir`");
+    }
+
     Ok(OperationInfo {
-        bytes: Some(_load(wd, &bifrost_path)?),
+        bytes: Some(bytes),
         name: String::from("default"),
+        text: None,
     })
 }
 
@@ -211,6 +231,10 @@ fn _load(wd: &mut WorkingDir, to: &BifrostPath) -> BifrostResult<u64> {
         while let Some(from) = wd.dirs_as_mut().pop() {
             _load_dir(&parent, &from, &to)?;
         }
+    } else {
+        // There are no directories to load, so create the target `to` path
+        // to begin loading the file(s).
+        fs::create_dir_all(&to.path)?;
     }
     return _load_files(&parent, &wd, &to);
 }
