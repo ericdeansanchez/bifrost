@@ -48,7 +48,7 @@ cmd = ["command string(s)"]
 
     if fs::metadata(&config.cwd().join("Bifrost.toml")).is_ok() {
         io::stderr().write(
-            "error: `bifrost init` cannot be run on an existing bifrost realm\n".as_bytes(),
+            "failed: `bifrost init` cannot be run on an existing bifrost realm\n".as_bytes(),
         )?;
         process::exit(1);
     }

@@ -12,7 +12,7 @@ use crate::ArgMatches;
 pub fn load(config: Config, args: &ArgMatches) -> BifrostResult<()> {
     let success = |op_info: &OperationInfo| -> BifrostResult<()> {
         io::stdout().write_fmt(format_args!(
-            "loaded `{}` bytes from workspace realm `{}`\n",
+            "bifrost: loaded {{{}}} bytes from realm {{{}}}\n",
             op_info.bytes.unwrap(),
             op_info.name,
         ))?;
@@ -24,6 +24,5 @@ pub fn load(config: Config, args: &ArgMatches) -> BifrostResult<()> {
         .build()?
         .exec()?;
 
-    success(&op_info)?;
-    return Ok(());
+    return Ok(success(&op_info)?);
 }
