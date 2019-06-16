@@ -1,12 +1,27 @@
 //! Implementation details of the `init` subcommand.
 use std::fs;
 use std::io::{self, Write};
+use std::path::PathBuf;
 use std::process;
 
 use crate::core::config::Config;
 use crate::core::hofund;
 use crate::util::BifrostResult;
 use crate::ArgMatches;
+
+const DEFAULT_TOML: &str = r#"[project]
+name = "project name"
+
+[container]
+name = "docker"
+
+[workspace]
+name = "name of workspace"
+ignore = ["target", ".git", ".gitignore"]
+
+[command]
+cmd = ["command string(s)"]
+"#;
 
 /// Initialize a given directory as a Bifrost realm.
 ///
@@ -32,20 +47,6 @@ use crate::ArgMatches;
 /// This function can also return an error if any call to `hofund::write`
 /// results in an error.
 pub fn init(config: Config, args: &ArgMatches) -> BifrostResult<()> {
-    let toml: &str = r#"[project]
-name = "project name"
-
-[container]
-name = "docker"
-
-[workspace]
-name = "name of workspace"
-ignore = ["target", ".git", ".gitignore"]
-
-[command]
-cmd = ["command string(s)"]
-"#;
-
     if fs::metadata(&config.cwd().join("Bifrost.toml")).is_ok() {
         io::stderr().write(
             "failed: `bifrost init` cannot be run on an existing bifrost realm\n".as_bytes(),
@@ -62,29 +63,8 @@ cmd = ["command string(s)"]
     };
 
     if args.args.is_empty() {
-        let name = config
-            .cwd()
-            .file_name()
-            .expect("msg: &str")
-            .to_str()
-            .expect("BUG: `bifrost::init` failed to convert cwd name `to_str`");
-        let toml: &str = &format!(
-            r#"[project]
-name = "project name"
-
-[container]
-name = "docker"
-
-[workspace]
-name = "{}"
-ignore = ["target", ".git", ".gitignore"]
-
-[command]
-cmd = ["command string(s)"]
-"#,
-            name
-        );
-
+        let name = name_work_space(config.cwd())?;
+        let toml = create_toml_with(name);
         hofund::write(&config.cwd().join("Bifrost.toml"), &toml.as_bytes())?;
         success(config.cwd())?;
     } else {
@@ -98,14 +78,51 @@ cmd = ["command string(s)"]
                          to string due to `{}` ...used default instead",
                         e
                     ))?;
-                    String::from(toml)
+                    String::from(DEFAULT_TOML)
                 }
             },
-            None => String::from(toml),
+            None => String::from(DEFAULT_TOML),
         };
         hofund::write(&config.cwd().join("Bifrost.toml"), toml.as_bytes())?;
         success(config.cwd())?;
     }
-
     Ok(())
+}
+
+fn name_work_space(from_cwd: &PathBuf) -> BifrostResult<&str> {
+    match from_cwd.file_name() {
+        Some(os_str) => match os_str.to_str() {
+            Some(s) => Ok(s),
+            None => {
+                io::stdout().write_all(
+                    "error: `bifrost::init` expected cwd name to be `Some`".as_bytes(),
+                )?;
+                process::exit(1);
+            }
+        },
+        None => {
+            io::stdout()
+                .write_all("error: `bifrost::init` expected cwd name to be `Some`".as_bytes())?;
+            process::exit(1);
+        }
+    }
+}
+
+fn create_toml_with(name: &str) -> String {
+    format!(
+        r#"[project]
+name = "project name"
+
+[container]
+name = "docker"
+
+[workspace]
+name = "{}"
+ignore = ["target", ".git", ".gitignore"]
+
+[command]
+cmd = ["command string(s)"]
+"#,
+        name
+    )
 }
