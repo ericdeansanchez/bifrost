@@ -1,14 +1,4 @@
 //! # Generates the top-level command line application.
-//! Generates a `clap::App` application. As the overall program grows, it
-//! should be easy to plug-in new commands and functionality without having to
-//! do much in `bifrost::app::app()`. I want to promote modularity without
-//! overly constraining ourselves or introducing too much abstraction and/or
-//! indirection unnecessarily.
-//!
-//! The process of building up the subcommands and the arguments to subcommands
-//! is a little repetitive right now. However, this is somewhat of a good thing
-//! as it demonstrates a _pattern_ of how to implement and extend our feature
-//! set; a pattern that _seeks_ to be as modular and as intuitive as possible.
 use clap::SubCommand;
 
 use crate::util::template::APP_TEMPLATE;

@@ -197,6 +197,7 @@ impl PartialEq for DirEntryExt {
 fn try_load(wd: &mut WorkingDir, bifrost_path: BifrostPath) -> BifrostResult<OperationInfo> {
     let bytes = _load(wd, &bifrost_path)?;
 
+    // If the number of `load`ed bytes differs from the number of `walk`ed bytes, stop.
     if bytes != wd.size {
         failure::bail!("error: `workingdir::try_load` failed to load entire `WorkingDir`");
     }

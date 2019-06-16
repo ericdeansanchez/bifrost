@@ -59,7 +59,8 @@ impl BifrostPath {
         if let Ok(bifrost_path) = BifrostPath::from_existing(home_path, name) {
             return Ok(bifrost_path);
         } else {
-            // from_existing failed do other stuff
+            // [TODO] search similar path names and attempt to resolve manifest
+            // modifications
         }
         Ok(BifrostPath {
             path: PathBuf::new(),
@@ -100,12 +101,8 @@ impl BifrostPath {
     }
 }
 
-pub fn get_path_or_panic(maybe_path: Option<BifrostPath>) -> PathBuf {
-    maybe_path
-        .expect(
-            "BUG: `bifrost_unload::unload` failed because it expected `BifrostPath` to be `Some`",
-        )
-        .path
+pub fn get_path_or_empty(maybe_path: Option<BifrostPath>) -> PathBuf {
+    maybe_path.map(|b| b.path).unwrap_or(PathBuf::new())
 }
 
 pub fn handle_bad_path(path: PathBuf) -> String {
