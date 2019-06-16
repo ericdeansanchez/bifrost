@@ -159,14 +159,11 @@ impl Default for BifrostManifest {
     fn default() -> Self {
         let default_manifest = r#"[project]
 name = "project name"
-
 [container]
 name = "docker"
-
 [workspace]
 name = "name of current workspace"
 ignore = ["target", ".git", ".gitignore"]
-
 [command]
 cmd = ["command string"]
 "#;
@@ -241,13 +238,9 @@ impl BifrostManifest {
             failure::bail!(
                 "--could not find `Bifrost.toml`
        within the current working directory.
-
 note: a Bifrost realm must be intialized before use.
-
 try:
-
     bifrost init
-
 "
             )
         }

@@ -1,7 +1,9 @@
 use crate::util::BifrostResult;
 
 use std::fs;
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
+use std::process;
 
 const BIFROST: &str = ".bifrost";
 const CONTAINER: &str = "container";
@@ -46,7 +48,16 @@ impl BifrostPath {
 
         // Bail if the path already exists.
         if fs::metadata(&path).is_ok() {
-            failure::bail!("error: the proposed path {:#?} already exists", path);
+            let path = path.to_str().unwrap_or("None");
+
+            io::stderr().write_fmt(format_args!(
+                "error: the proposed path already exists:
+  `{}`
+hint: did you mean to reload?
+",
+                path
+            ))?;
+            process::exit(1);
         }
 
         Ok(BifrostPath { path })
