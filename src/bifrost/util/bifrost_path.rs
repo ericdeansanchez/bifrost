@@ -99,3 +99,25 @@ impl BifrostPath {
         Ok(())
     }
 }
+
+pub fn get_path_or_panic(maybe_path: Option<BifrostPath>) -> PathBuf {
+    maybe_path
+        .expect(
+            "BUG: `bifrost_unload::unload` failed because it expected `BifrostPath` to be `Some`",
+        )
+        .path
+}
+
+pub fn handle_bad_path(path: PathBuf) -> String {
+    pub fn handle_str(s: &str) -> String {
+        if s.is_empty() {
+            return String::from("empty path");
+        }
+        String::from("bad string")
+    }
+
+    match path.to_str() {
+        Some(s) => handle_str(s),
+        None => String::from("None"),
+    }
+}

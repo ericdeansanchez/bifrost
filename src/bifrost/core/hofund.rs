@@ -36,6 +36,14 @@ pub fn remove_file(path: &Path) -> BifrostResult<()> {
     }
 }
 
+/// Removes the entire diretory specified by path.
+///
+/// # Warn
+/// Use carefully!
+pub fn remove_dir_all(path: &Path) -> BifrostResult<()> {
+    Ok(fs::remove_dir_all(&path)?)
+}
+
 /// Reads a file from the given `path`.
 pub fn read(path: &Path) -> BifrostResult<String> {
     match fs::read_to_string(path) {
