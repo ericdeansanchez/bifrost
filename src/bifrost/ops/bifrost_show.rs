@@ -29,13 +29,13 @@ pub fn show(config: Config, args: &ArgMatches) -> BifrostResult<()> {
 
     // If the path does not exist, then...
     if fs::metadata(&path).is_err() {
+        // [TODO] search similar path names and attempt to resolve manifest
+        // modifications.
         let path = bifrost_path::handle_bad_path(path);
-
         io::stdout().write_fmt(format_args!(
             "failed: to `show` {{{}}} are you sure you have called `bifrost load`?\n",
             path
         ))?;
-
         process::exit(1);
     }
 

@@ -333,6 +333,9 @@ impl LoadSpace {
             }
         }
 
+        // If the number of bytes loaded does not equal the number of bytes
+        // recorded when the workspace was created, then the workspace has not
+        // been properly loaded.
         if nbytes != self.workspace.size {
             failure::bail!("error: could not `load` all contents");
         }
@@ -433,6 +436,8 @@ pub struct ShowSpace {
     opts: Option<BifrostOptions>,
 }
 
+/// A `ShowSpace`'s primary goal is to `show` the contents in the Bifrost container
+/// that have been `load`ed from the current workspace.
 impl ShowSpace {
     /// Returns a reference to the underlying `home_path` `PathBuf` defined
     /// upon configuration.
@@ -461,7 +466,6 @@ impl ShowSpace {
         }
         return Ok(self.show_default()?);
     }
-
 
     fn show_default(&self) -> BifrostResult<OperationInfo> {
         let mut op_info = OperationInfo::new();
@@ -512,13 +516,18 @@ impl ShowSpace {
     }
 }
 
+/// Implements `BifrostOperable` for `ShowSpace`.
+/// A `ShowSpace` is `prep`-able, `build`-able, and `exec`-utable.
 impl BifrostOperable for ShowSpace {
+    /// Prepares a `ShowSpace` by setting its `BifrostPath` from the current
+    /// existing workspace.
     fn prep(&mut self) -> BifrostResult<&mut BifrostOperable> {
         let path = BifrostPath::try_from_existing(self.home_path(), self.name())?;
         self.bifrost_path = Some(path);
         Ok(self)
     }
 
+    /// Builds a `ShowSpace` given its `BifrostOptions`.
     fn build(&mut self) -> BifrostResult<&mut BifrostOperable> {
         if let Some(ref opts) = self.opts {
             if opts.verbose {
@@ -531,6 +540,7 @@ impl BifrostOperable for ShowSpace {
         Ok(self)
     }
 
+    /// Executes a `ShowSpace`'s primary function: `show`.
     fn exec(&mut self) -> BifrostResult<OperationInfo> {
         Ok(self.show()?)
     }
@@ -544,6 +554,8 @@ impl BifrostOperable for ShowSpace {
     }
 }
 
+/// Primary data structure used to `unload` a `WorkSpace` that exist within the
+/// Bifrost container.
 #[derive(Debug)]
 pub struct UnloadSpace {
     /// The `WorkSpace` to be loaded.
@@ -552,6 +564,8 @@ pub struct UnloadSpace {
     bifrost_path: Option<BifrostPath>,
 }
 
+/// An `UnloadSpace`'s primary goal is to `unload` the contents from the Bifrost container
+/// that have been `load`ed from the current workspace.
 impl UnloadSpace {
     /// Returns a reference to the underlying `home_path` `PathBuf` defined
     /// upon configuration.
@@ -564,6 +578,11 @@ impl UnloadSpace {
         self.workspace.name()
     }
 
+    /// Unloads the current workspace from the Bifrost container by removing
+    /// the entire directory its `BifrostPath` denotes.
+    ///
+    /// If the `BifrostPath` is `Some`, then there is an attempt to remove the workspace.
+    /// If this attempt fails, then a message is written to stdout before exiting.
     pub fn unload(&self) -> BifrostResult<OperationInfo> {
         use crate::core::hofund;
 
@@ -596,20 +615,27 @@ impl UnloadSpace {
     }
 }
 
+/// Implements `BifrostOperable` for `UnloadSpace`.
+/// An `UnloadSpace` is `prep`-able, `build`-able, and `exec`-utable.
 impl BifrostOperable for UnloadSpace {
+    /// Prepares an `UnloadSpace` by setting its `BifrostPath` from the current
+    /// existing workspace.
     fn prep(&mut self) -> BifrostResult<&mut BifrostOperable> {
         let path = BifrostPath::try_from_existing(self.home_path(), self.name())?;
         self.bifrost_path = Some(path);
         Ok(self)
     }
 
+    /// Builds an `UnloadSpace`.
     fn build(&mut self) -> BifrostResult<&mut BifrostOperable> {
         Ok(self)
     }
 
+    /// Executes an `UnloadSpace`'s primary function: `unload`.
     fn exec(&mut self) -> BifrostResult<OperationInfo> {
         Ok(self.unload()?)
     }
+
     /// Returns a cloned version of the target `BifrostPath` (or None).
     fn bifrost_path(&self) -> Option<BifrostPath> {
         if let Some(ref path) = self.bifrost_path {
@@ -619,8 +645,8 @@ impl BifrostOperable for UnloadSpace {
     }
 }
 
-/// A no-field struct used to signal a division of labor/responsibility.
 /// `WorkSpaceBuilder` provides utility functions needed to construct `WorkSpaceArgs`.
+/// It is a no-field struct used to signal a division of labor/responsibility.
 struct WorkSpaceBuilder;
 
 impl WorkSpaceBuilder {
@@ -666,7 +692,7 @@ impl WorkSpaceBuilder {
         }
     }
 
-    /// Returns the `BifrostOptions` gathered from `ArgMatches` if they are present and 
+    /// Returns the `BifrostOptions` gathered from `ArgMatches` if they are present and
     /// returns `None` if they are not present.
     fn get_show_space_opts(args: &ArgMatches) -> Option<BifrostOptions> {
         if args.args.is_empty() {

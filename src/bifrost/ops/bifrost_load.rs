@@ -24,6 +24,5 @@ pub fn load(config: Config, args: &ArgMatches) -> BifrostResult<()> {
         .build()?
         .exec()?;
 
-    success(&op_info)?;
-    return Ok(());
+    return Ok(success(&op_info)?);
 }
