@@ -21,6 +21,9 @@ fn main() -> BifrostResult<()> {
         ("unload", Some(arg_matches)) => {
             commands::unload::exec(Config::default(), arg_matches)?;
         }
+        ("run", Some(arg_matches)) => {
+            commands::run::exec(Config::default(), arg_matches)?;
+        }
         _ => {
             println!("{}", bifrost::util::template::EXPLICIT_LONG_HELP);
         }
