@@ -7,6 +7,22 @@ currently being designed to bridge the gap between one tool in particular.
 
 [![Build Status](https://travis-ci.org/ericdeansanchez/bifrost.svg?branch=master)](https://travis-ci.org/ericdeansanchez/bifrost)
 
+## Overview
+
+Bifröst seeks to be a convenience layer between you and a containerized command
+line application. The general idea is to be a bridge between one OS, say
+macOS Mojave, and another OS––Ubuntu.
+
+For example, I have this command line app that I cannot use on macOS Mojave, but
+it is a breeze to run on linux. I don't want to dual-boot, I don't want to run anything
+in a virtual machine, and I don't want to rely on university lab machines.
+
+With Bifröst, I want to be able to containerize a command line app, automate file
+transfering (loading, reloading, unloading) and run a sequence of commands without
+so much command-line hand-jamming.
+
+Bifröst is currently a **work in progress** and is not currently ready for use.
+
 ## Build
 
 ```bash
@@ -30,17 +46,12 @@ $ cargo doc --no-deps --open
 
 ## Run
 
-There is some default behavior for running Bifrost this way:
-
-```bash
-$ cargo run
-```
-
-## Running the actual binary
-
 Bifrost is currently a work in progress and running it looks something like:
 
 ```bash
-$ ./target/debug/bifrost show
-$ ./target/debug/bifrost run
+$ cargo run init
+$ cargo run load
+$ cargo run show
+$ cargo run run
+$ cargo run unload
 ```
