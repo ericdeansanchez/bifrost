@@ -134,7 +134,8 @@ struct WorkSpaceArgs {
 }
 
 impl WorkSpaceArgs {
-    /// Gets the mode, contents, name, and ignore_list from `ArgMatches` and a `Config`.
+    /// Constructs `WorkSpaceArgs` from  the mode, contents, name, and
+    /// ignore_list from `ArgMatches` and a `Config`.
     fn parse_load(config: Config, args: &ArgMatches) -> Self {
         let ws_mode = WorkSpaceBuilder::get_mode(&args);
         let ws_name = WorkSpaceBuilder::get_name(&config);
@@ -151,7 +152,7 @@ impl WorkSpaceArgs {
         }
     }
 
-    /// Gets the mode, options, and current workspace name.
+    /// Constructs `WorkSpaceArgs` from the mode, options, and current workspace name.
     fn parse_show(config: Config, args: &ArgMatches) -> Self {
         let ws_mode = WorkSpaceBuilder::get_mode(&args);
         let ws_opts = WorkSpaceBuilder::get_opts(&args);
@@ -166,7 +167,7 @@ impl WorkSpaceArgs {
         }
     }
 
-    /// Gets the current workspace name.
+    /// Constructs `WorkSpaceArgs` from the current workspace name.
     fn parse_unload(config: Config, _args: &ArgMatches) -> Self {
         let ws_name = WorkSpaceBuilder::get_name(&config);
         WorkSpaceArgs {
@@ -179,7 +180,7 @@ impl WorkSpaceArgs {
         }
     }
 
-    /// Gets workspace name and associated commands.
+    /// Constructs `WorkSpaceArgs` from the workspace name and associated commands.
     fn parse_run(config: Config, _args: &ArgMatches) -> Self {
         let ws_name = WorkSpaceBuilder::get_name(&config);
 
