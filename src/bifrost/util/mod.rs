@@ -23,9 +23,12 @@ impl Default for BifrostOptions {
 mod macros;
 
 pub mod bifrost_path;
+pub mod docker;
 pub mod error;
 pub mod operation_info;
+pub mod process_builder;
 pub mod template;
 
 pub use bifrost_path::BifrostPath;
 pub use operation_info::OperationInfo;
+pub use process_builder::ProcessBuilder;

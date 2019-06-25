@@ -206,6 +206,7 @@ fn try_load(wd: &mut WorkingDir, bifrost_path: BifrostPath) -> BifrostResult<Ope
         bytes: Some(bytes),
         name: String::from("default"),
         text: None,
+        ..Default::default()
     })
 }
 

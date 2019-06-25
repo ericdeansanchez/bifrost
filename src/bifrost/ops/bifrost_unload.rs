@@ -24,7 +24,9 @@ pub fn unload(config: Config, args: &ArgMatches) -> BifrostResult<()> {
     let ws = ws.prep()?;
 
     // Get the `BifrostPath`'s underlying `PathBuf`.
-    let path = bifrost_path::get_path_or_empty(ws.bifrost_path());
+    // [AUDIT] - just think about what empty means here and elsewhere
+    // write more tests dude!!!
+    let path = bifrost_path::get_path_or_empty(ws.target());
 
     // If the path does not exist, then...
     if fs::metadata(&path).is_err() {

@@ -2,6 +2,7 @@
 use serde_derive::{Deserialize, Serialize};
 use std::env;
 use std::fs;
+use std::io::{self, Write};
 use std::path::PathBuf;
 use std::process;
 
@@ -11,6 +12,11 @@ use crate::ArgMatches;
 
 use dirs;
 use failure;
+
+// [TODO] More thought should be put forward concerning `Config` and `ArgMatches`
+// At some point, `Config` should be the only thing needed or at least it should
+// look something like this:
+// [config] + [manifest] + [arg_matches] = [the best of all worlds]
 
 /// Primary configuration structure for Bifrost realms.
 ///
@@ -25,9 +31,8 @@ pub struct Config {
     home_path: PathBuf,
     /// Absolute path to a user's current working directory.
     cwd: PathBuf,
-    /// The Bifrost manifest contains workspace configuration information.
-    /// This structure can be constructed
-    /// * `from_only` `ArgMatches` or
+    /// The [`BifrostManifest`] contains workspace configuration information.
+    /// This structure can be constructed either from:
     /// * another Bifrost.toml manifest or
     /// * the combination of `ArgMatches` and `BifrostManifest`
     manifest: Option<BifrostManifest>,
@@ -139,17 +144,20 @@ impl Config {
     pub fn manifest(&self) -> Option<&BifrostManifest> {
         match &self.manifest {
             Some(m) => Some(&m),
-            None => None,
+            _ => None,
         }
+    }
+
+    pub fn manifest_mut(&mut self) -> Option<&mut BifrostManifest> {
+        self.manifest.as_mut()
     }
 }
 
 /// Primary structure to serialize and deserialize Bifrost manifest data.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct BifrostManifest {
-    project: Option<ProjectConfig>,
-    container: Option<ContainerConfig>,
     workspace: Option<WorkSpaceConfig>,
+    container: Option<ContainerConfig>,
     command: Option<CommandConfig>,
 }
 
@@ -157,15 +165,14 @@ pub struct BifrostManifest {
 /// This string is then toml-fied via `toml::from_str`.
 impl Default for BifrostManifest {
     fn default() -> Self {
-        let default_manifest = r#"[project]
-name = "project name"
-[container]
-name = "docker"
-[workspace]
+        let default_manifest = r#"[workspace]
 name = "name of current workspace"
 ignore = ["target", ".git", ".gitignore"]
+[container]
+name = "docker"
 [command]
-cmd = ["command string"]
+op = "default-op"
+args = ["default-arg"]
 "#;
         match toml::from_str(&default_manifest) {
             Ok(valid_toml) => valid_toml,
@@ -200,25 +207,15 @@ impl BifrostManifest {
     /// Otherwise, this method `bail`s returning the error message to be displayed
     /// to the user before exiting.
     fn manifest_or_bust(config: Config, args: &ArgMatches) -> Self {
-        fn try_from_manifest(config: Config, args: &ArgMatches) -> BifrostResult<BifrostManifest> {
-            match BifrostManifest::from_manifest(&config) {
-                Ok(manifest) => {
-                    if args.args.is_empty() {
-                        return Ok(manifest);
-                    } else {
-                        return Ok(manifest.combine_with(&args));
-                    }
+        match BifrostManifest::from_manifest(&config) {
+            Ok(manifest) => {
+                if args.args.is_empty() {
+                    return manifest;
+                } else {
+                    return manifest.combine_with(&args);
                 }
-                Err(e) => failure::bail!("error: not a valid Bifrost realm\n{}", e),
             }
-        }
-
-        match try_from_manifest(config, &args) {
-            Ok(manifest) => manifest,
-            Err(e) => {
-                eprintln!("{}", e);
-                process::exit(1);
-            }
+            Err(_) => BifrostManifest::default(),
         }
     }
 
@@ -245,7 +242,16 @@ try:
             )
         }
 
-        let s = hofund::read(&cwd.join("Bifrost.toml"))?;
+        let s = match hofund::read(&cwd.join("Bifrost.toml")) {
+            Ok(s) => s,
+            Err(e) => {
+                io::stderr().write_fmt(format_args!(
+                    "error: could not read Bifrost.toml due to `{}`\n",
+                    e
+                ))?;
+                process::exit(1);
+            }
+        };
 
         match toml::from_str(&s) {
             Ok(b) => Ok(b),
@@ -263,11 +269,6 @@ try:
     /// were explicitly passed will be replaced; otherwise, the `BifrostManifest`'s
     /// fields will contain its previously owned values.
     pub fn combine_with(mut self, args: &ArgMatches) -> Self {
-        self.project = match value_of("project", &args) {
-            None => self.project,
-            Some(p) => Some(ProjectConfig { name: Some(p) }),
-        };
-
         self.container = match value_of("container", &args) {
             None => self.container,
             Some(c) => Some(ContainerConfig { name: Some(c) }),
@@ -295,60 +296,14 @@ try:
                 })
             }
         };
-
-        self.command = match values_of("command", &args) {
-            None => self.command,
-            Some(c) => Some(CommandConfig { cmd: Some(c) }),
-        };
+        self.command = (|| -> Option<CommandConfig> {
+            if value_of("args", &args).is_some() || value_of("op", &args).is_some() {
+                return Some(CommandConfig::from_matches(&args));
+            }
+            return Some(CommandConfig::default());
+        })();
 
         self
-    }
-
-    /// Constructs a `BifrostManifest` from _only_ command line arguments.
-    ///
-    /// This function constructs a `BifrostManifest` from each value of
-    /// command line argument that is present in the `clap::ArgMatches`.
-    ///
-    /// Each field that is not present is constructed with default arguments.
-    pub fn from_only(args: &ArgMatches) -> Self {
-        BifrostManifest {
-            project: match value_of("project", &args) {
-                None => Some(ProjectConfig::new("project name")),
-                Some(p) => Some(ProjectConfig::new(&p)),
-            },
-            container: match value_of("container", &args) {
-                None => Some(ContainerConfig::new("docker")),
-                Some(c) => Some(ContainerConfig { name: Some(c) }),
-            },
-            workspace: match value_of("workspace", &args) {
-                None => Some(WorkSpaceConfig::new(
-                    "name of workspace",
-                    vec![
-                        String::from("target"),
-                        String::from(".git"),
-                        String::from(".gitignore"),
-                    ],
-                )),
-                Some(ws) => {
-                    let ignore = match values_of("ignore", &args) {
-                        None => Some(vec![
-                            String::from("target"),
-                            String::from(".git"),
-                            String::from(".gitignore"),
-                        ]),
-                        Some(ig) => Some(ig),
-                    };
-                    Some(WorkSpaceConfig {
-                        name: Some(ws),
-                        ignore,
-                    })
-                }
-            },
-            command: match values_of("command", &args) {
-                None => Some(CommandConfig::new(vec![String::from("command string(s)")])),
-                Some(c) => Some(CommandConfig { cmd: Some(c) }),
-            },
-        }
     }
 
     /// Returns a `BifrostResult`.
@@ -365,9 +320,18 @@ try:
         }
     }
 
-    /// Returns an optional reference to this manifest's `WorkSpaceConfig`.
-    pub fn workspace_config(&self) -> Option<&WorkSpaceConfig> {
+    /// Gets a reference to the manifest's `WorkSpaceConfig`.
+    pub fn get_workspace_config(&self) -> Option<&WorkSpaceConfig> {
         self.workspace.as_ref()
+    }
+
+    /// Gets a reference to the manifest's `BinaryConfig`.
+    pub fn get_command_config(&self) -> Option<&CommandConfig> {
+        self.command.as_ref()
+    }
+
+    pub fn take_command_config(&mut self) -> Option<CommandConfig> {
+        self.command.take()
     }
 }
 
@@ -403,27 +367,6 @@ struct ContainerConfig {
     name: Option<String>,
 }
 
-impl ContainerConfig {
-    fn new(name: &str) -> Self {
-        ContainerConfig {
-            name: Some(String::from(name)),
-        }
-    }
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-struct ProjectConfig {
-    name: Option<String>,
-}
-
-impl ProjectConfig {
-    fn new(name: &str) -> Self {
-        ProjectConfig {
-            name: Some(String::from(name)),
-        }
-    }
-}
-
 #[derive(Debug, Deserialize, Serialize)]
 pub struct WorkSpaceConfig {
     name: Option<String>,
@@ -448,13 +391,40 @@ impl WorkSpaceConfig {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-struct CommandConfig {
-    cmd: Option<Vec<String>>,
+pub struct CommandConfig {
+    cmds: Option<Vec<String>>,
+}
+
+impl Clone for CommandConfig {
+    fn clone(&self) -> Self {
+        CommandConfig {
+            cmds: self.cmds.as_ref().map(|a| a.clone()),
+        }
+    }
 }
 
 impl CommandConfig {
-    fn new(cmd: Vec<String>) -> Self {
-        CommandConfig { cmd: Some(cmd) }
+    fn from_matches(arg_matches: &ArgMatches) -> Self {
+        if arg_matches.args.is_empty() {
+            return CommandConfig::default();
+        }
+
+        let cmds = values_of("cmds", &arg_matches);
+        CommandConfig { cmds }
+    }
+}
+
+impl Default for CommandConfig {
+    fn default() -> Self {
+        CommandConfig {
+            cmds: Some(vec![String::from("default-arg")]),
+        }
+    }
+}
+
+impl CommandConfig {
+    pub fn get_cmds(&self) -> Option<&Vec<String>> {
+        self.cmds.as_ref()
     }
 }
 
@@ -488,27 +458,9 @@ mod test {
 
         let manifest = BifrostManifest::from_manifest(&config);
         assert!(manifest.is_ok());
-
         // The manifest exists and it is safe to unwrap.
         let msg = "BUG: manifest `is_ok` but";
         let manifest = manifest.unwrap();
-        let left = String::from("project name");
-        assert_eq!(
-            left,
-            *manifest
-                .project
-                .as_ref()
-                .expect(&format!(
-                    "{} {}",
-                    msg, "`ProjectConfig` cannot be unwrapped"
-                ))
-                .name
-                .as_ref()
-                .expect(&format!(
-                    "{} {}",
-                    msg, "`ProjectConfig::name` cannot be unwrapped"
-                ))
-        );
 
         let left = String::from("docker");
         assert_eq!(
@@ -528,17 +480,17 @@ mod test {
                 ))
         );
 
-        let ws_config = manifest.workspace_config().expect(&format!(
+        let ws_config = manifest.get_workspace_config().expect(&format!(
             "{} {}",
-            msg, "`BifrostManifest::workspace_config` cannot be unwrapped"
+            msg, "`BifrostManifest.workspace` cannot be unwrapped"
         ));
 
-        let left = "name of workspace";
+        let left = "workspace name";
         assert_eq!(
             left,
             ws_config.name.as_ref().expect(&format!(
                 "{} {}",
-                msg, "`WorkSpaceConfig::name` cannot be unwrapped"
+                msg, "`WorkSpaceConfig.name` cannot be unwrapped"
             ))
         );
 
@@ -556,20 +508,16 @@ mod test {
             ))
         );
 
-        let left = vec![String::from("command string(s)")];
+        let left = vec![String::from("test")];
         assert_eq!(
-            left,
+            Some(left.as_ref()),
             manifest
-                .command
+                .get_command_config()
                 .expect(&format!(
                     "{} {}",
                     msg, "`CommandConfig` cannot be unwrapped"
                 ))
-                .cmd
-                .expect(&format!(
-                    "{} {}",
-                    msg, "`CommandConfig::cmd` cannot be unwrapped"
-                ))
+                .get_cmds()
         );
     }
 }

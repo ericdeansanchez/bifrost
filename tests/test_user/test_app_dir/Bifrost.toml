@@ -1,12 +1,9 @@
-[project]
-name = "project name"
+[workspace]
+name = "workspace name"
+ignore = ["target", ".git", ".gitignore"]
 
 [container]
 name = "docker"
 
-[workspace]
-name = "name of workspace"
-ignore = ["target", ".git", ".gitignore"]
-
 [command]
-cmd = ["command string(s)"]
+cmds = ["test"]
