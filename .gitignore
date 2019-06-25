@@ -7,3 +7,7 @@
 
 # macOS
 .DS_Store
+
+# If a local manifest gets generated for testing
+# or development purposes, ignore it.
+Bifrost.toml

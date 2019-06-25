@@ -46,15 +46,6 @@ fn all_sub_commands() -> Vec<App> {
     sub_commands
 }
 
-fn sub_command_run(commands: &mut Vec<App>) {
-    const ABOUT: &str = "Run command string(s) on a bifrost workspace";
-    const USAGE: &str = "bifrost run [OPTIONS]";
-
-    let s = SubCommand::with_name("run").about(ABOUT).usage(USAGE);
-
-    commands.push(s);
-}
-
 fn sub_command_unload(commands: &mut Vec<App>) {
     const ABOUT: &str = "Unload a workspace from the bifrost container";
     const USAGE: &str = "bifrost unload [OPTIONS]";
@@ -62,6 +53,49 @@ fn sub_command_unload(commands: &mut Vec<App>) {
     let s = SubCommand::with_name("unload").about(ABOUT).usage(USAGE);
 
     commands.push(s);
+}
+
+fn sub_command_run(commands: &mut Vec<App>) {
+    const ABOUT: &str = "Run command string(s) on a bifrost workspace";
+    const USAGE: &str = "bifrost run [OPTIONS]";
+
+    let mut s = SubCommand::with_name("run").about(ABOUT).usage(USAGE);
+
+    for a in all_run_args() {
+        s = s.arg(a);
+    }
+
+    commands.push(s);
+}
+
+fn all_run_args() -> Vec<Arg> {
+    let mut run_args: Vec<Arg> = vec![];
+    arg_run_commands(&mut run_args);
+
+    run_args
+}
+
+fn arg_run_commands(args: &mut Vec<Arg>) {
+    const SHORT: &str = "Commands passed to the target application";
+    const LONG: &str = "
+Commands specified as double-quoted strings are passed to the target
+application within the bifrost container. Bifrost assumes that commands
+passed explicitly take precedence over those specified in the manifest,
+Bifrost.toml.
+
+\t$ bifrost run --commands \"cd src/\" \"rg unwrap\"
+
+
+";
+
+    let a = Arg::with_name("commands")
+        .takes_value(true)
+        .multiple(true)
+        .long("commands")
+        .help(SHORT)
+        .long_help(LONG);
+
+    args.push(a);
 }
 
 fn sub_command_show(commands: &mut Vec<App>) {
@@ -98,7 +132,6 @@ similar to running the `ls` command on unix-like platforms.
 ";
 
     let a = Arg::with_name("all")
-        .multiple(true)
         .long("all")
         .help(SHORT)
         .long_help(LONG);
@@ -120,7 +153,6 @@ the Bifrost container realm.
 ";
 
     let a = Arg::with_name("diff")
-        .multiple(true)
         .long("diff")
         .help(SHORT)
         .long_help(LONG);
@@ -173,7 +205,6 @@ detected and loaded into the bifrost container without having to manually run \
 ";
 
     let a = Arg::with_name("auto")
-        .multiple(true)
         .long("auto")
         .short("a")
         .help(SHORT)
@@ -210,7 +241,6 @@ run.
 ";
 
     let a = Arg::with_name("modified")
-        .multiple(true)
         .long("modified")
         .short("m")
         .help(SHORT)
