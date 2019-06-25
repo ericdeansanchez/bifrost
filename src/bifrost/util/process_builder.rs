@@ -198,8 +198,8 @@ mod test {
         assert!(cat.exec().is_err());
     }
 
-    #[test]
-    fn test_with_rust_hello_world() -> BifrostResult<()> {
+    // #[test]
+    fn _test_with_rust_hello_world() -> BifrostResult<()> {
         use dirs;
         let home_path =
             dirs::home_dir().expect("could not get home path will testing `process_builder`");
