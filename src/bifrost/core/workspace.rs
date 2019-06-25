@@ -9,9 +9,9 @@ use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process;
 
+use crate::ArgMatches;
 use spinner::SpinnerBuilder;
 use subprocess::{self, Popen, PopenConfig, Redirection};
-use crate::ArgMatches;
 
 /// Primary structure which `bifrost::ops operate upon.
 ///

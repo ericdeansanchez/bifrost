@@ -171,8 +171,7 @@ ignore = ["target", ".git", ".gitignore"]
 [container]
 name = "docker"
 [command]
-op = "default-op"
-args = ["default-arg"]
+cmds = ["default-arg"]
 "#;
         match toml::from_str(&default_manifest) {
             Ok(valid_toml) => valid_toml,
@@ -296,12 +295,11 @@ try:
                 })
             }
         };
-        self.command = (|| -> Option<CommandConfig> {
-            if value_of("args", &args).is_some() || value_of("op", &args).is_some() {
-                return Some(CommandConfig::from_matches(&args));
-            }
-            return Some(CommandConfig::default());
-        })();
+
+        self.command = match self.command {
+            Some(c) => Some(c.combine_with(&args)),
+            None => self.command,
+        };
 
         self
     }
@@ -404,20 +402,31 @@ impl Clone for CommandConfig {
 }
 
 impl CommandConfig {
-    fn from_matches(arg_matches: &ArgMatches) -> Self {
+    fn combine_with(self, arg_matches: &ArgMatches) -> Self {
         if arg_matches.args.is_empty() {
-            return CommandConfig::default();
+            return self;
         }
 
-        let cmds = values_of("cmds", &arg_matches);
-        CommandConfig { cmds }
+        match values_of("commands", &arg_matches) {
+            Some(mut arg_cmds) => {
+                if let Some(cmds) = self.cmds {
+                    for c in cmds {
+                        arg_cmds.push(c);
+                    }
+                    return CommandConfig { cmds: Some(arg_cmds) };
+                } else {
+                    return CommandConfig { cmds: Some(arg_cmds) };
+                }
+            }
+            None => self,
+        }
     }
 }
 
 impl Default for CommandConfig {
     fn default() -> Self {
         CommandConfig {
-            cmds: Some(vec![String::from("default-arg")]),
+            cmds: Some(vec![String::from("ls")]),
         }
     }
 }
