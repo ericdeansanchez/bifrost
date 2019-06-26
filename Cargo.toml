@@ -2,6 +2,15 @@
 name = "bifrost"
 version = "0.1.0"
 authors = ["ericdeansanchez <ericdeansanchez@berkeley.edu>", "parkerduckworth <parker_duckworth@icloud.com>"]
+description = """
+bifrost is a command line application that allows users to
+achieve "virtualization via containers".
+"""
+documentation = "https://github.com/ericdeansanchez/bifrost"
+homepage = "https://github.com/ericdeansanchez/bifrost"
+repository = "https://github.com/ericdeansanchez/bifrost"
+readme = "README.md"
+license = "MIT"
 edition = "2018"
 
 [lib]
