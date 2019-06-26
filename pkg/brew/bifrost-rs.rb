@@ -9,7 +9,7 @@ class BifrostBin < Formula
     end
 
     def install
-      bin.install "rg"
+      bin.install "bifrost"
     end
 
     test do
