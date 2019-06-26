@@ -23,6 +23,26 @@ so much command-line hand-jamming.
 
 Bifröst is currently a **work in progress** and is not currently ready for use.
 
+## Installation
+
+Bifröst is still under initial development, however, a pre-release version is
+available via:
+
+```
+  $ brew install bifrost
+```
+**Warning**: see the note below.
+
+#### Note
+This release is only meant to keep development rolling forward and
+* it is **NOT** intended for general use and
+* it is **NOT** ready for general use
+
+Currently, Wed Jun 26 16:52:28 PDT 2019, it lacks some external/supporting directories and files
+necessary for persistence and basic operation.
+
+
+
 ## Build
 
 ```bash
