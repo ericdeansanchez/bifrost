@@ -198,7 +198,6 @@ mod test {
         assert!(cat.exec().is_err());
     }
 
-    // #[test]
     fn _test_with_rust_hello_world() -> BifrostResult<()> {
         use dirs;
         let home_path =
@@ -220,7 +219,7 @@ mod test {
             }
         }
 
-        let path = home_path.join(".bifrost").join("container");
+        let path = home_path.join(".bifrost").join("container").join("bifrost");
 
         let process = ProcessBuilder {
             program: String::from("cargo"),

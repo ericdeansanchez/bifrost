@@ -43,6 +43,9 @@ fn main() -> BifrostResult<()> {
             }
             commands::run::exec(config, arg_matches)?;
         }
+        ("setup", Some(arg_matches)) => {
+            commands::setup::exec(Config::default(), arg_matches)?;
+        }
         _ => {
             println!("{}", bifrost::util::template::EXPLICIT_LONG_HELP);
         }

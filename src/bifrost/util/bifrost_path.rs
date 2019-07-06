@@ -5,8 +5,9 @@ use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process;
 
-const BIFROST: &str = ".bifrost";
+const DOT_BIFROST: &str = ".bifrost";
 const CONTAINER: &str = "container";
+const BIFROST_CONTAINER: &str = "bifrost";
 
 /// A light wrapper around a `PathBuf`. This structure exists to deter improper
 /// command execution. That is, `bifrost::ops` require target paths to be `BifrostPath`s
@@ -41,7 +42,10 @@ impl BifrostPath {
         BifrostPath::check(name)?;
 
         // Construct path to the Bifrost container.
-        let container_path = home_path.join(BIFROST).join(CONTAINER);
+        let container_path = home_path
+            .join(DOT_BIFROST)
+            .join(CONTAINER)
+            .join(BIFROST_CONTAINER);
         // Construct path to this workspace's destination within the Bifrost container.
         let path =
             container_path.join(name.expect("BUG: `WorkSpace::name` should not be `None` here"));
@@ -82,7 +86,11 @@ hint: did you mean to reload?
     where
         P: AsRef<Path>,
     {
-        let container_path = home_path.as_ref().join(BIFROST).join(CONTAINER);
+        let container_path = home_path
+            .as_ref()
+            .join(DOT_BIFROST)
+            .join(CONTAINER)
+            .join(BIFROST_CONTAINER);
         let path =
             container_path.join(name.expect("BUG: `WorkSpace::name` should not be `None` here"));
 
@@ -97,7 +105,13 @@ hint: did you mean to reload?
 
     /// Checks that the `proposed_name` does not contain any black-listed names.
     fn check(proposed_name: Option<&String>) -> BifrostResult<()> {
-        let black_list: Vec<&str> = vec![BIFROST, CONTAINER, ".bifrost_config", "tmp"];
+        let black_list: Vec<&str> = vec![
+            DOT_BIFROST,
+            CONTAINER,
+            BIFROST_CONTAINER,
+            ".bifrost_config",
+            "tmp",
+        ];
 
         if let Some(name) = proposed_name {
             if black_list.iter().any(|b| *b == name) {

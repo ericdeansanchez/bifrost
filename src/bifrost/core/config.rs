@@ -413,9 +413,13 @@ impl CommandConfig {
                     for c in cmds {
                         arg_cmds.push(c);
                     }
-                    return CommandConfig { cmds: Some(arg_cmds) };
+                    return CommandConfig {
+                        cmds: Some(arg_cmds),
+                    };
                 } else {
-                    return CommandConfig { cmds: Some(arg_cmds) };
+                    return CommandConfig {
+                        cmds: Some(arg_cmds),
+                    };
                 }
             }
             None => self,

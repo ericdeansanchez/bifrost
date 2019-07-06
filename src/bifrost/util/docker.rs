@@ -1,3 +1,4 @@
+use crate::core::hofund;
 use crate::util::{BifrostResult, ProcessBuilder};
 
 use std::path::Path;
@@ -98,6 +99,64 @@ pub fn stop() -> BifrostResult<()> {
     Ok(())
 }
 
+pub fn apt_get_build_essential(name: &str) -> BifrostResult<()> {
+    if let Some(path) = dirs::home_dir() {
+        let docker_file = path
+            .join(".bifrost")
+            .join("container")
+            .join("bifrost")
+            .join("Dockerfile");
+        let contents = format!(
+            r#"
+
+# Bifrost Appended:
+RUN apt-get install build-essential {} -y
+
+"#,
+            name
+        );
+        hofund::append(&docker_file, &contents.as_bytes())?;
+    }
+    Ok(())
+}
+
+pub struct ImageBuilder {
+    pub name: String,
+    pub tag: String,
+    pub path: String,
+}
+
+impl ImageBuilder {
+    pub fn build(&self) -> BifrostResult<()> {
+        let docker_process = ProcessBuilder {
+            program: self.name.clone(),
+            args: vec![
+                String::from("build"),
+                String::from("-t"),
+                self.tag.clone(),
+                self.path.clone(),
+            ],
+            cwd: None,
+        };
+
+        let _sp = SpinnerBuilder::new("Building Image...".into())
+            .spinner(vec![
+                "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏",
+            ])
+            .start();
+
+        match docker_process.exec() {
+            Ok(output) => {
+                assert!(output.status.success());
+            }
+            Err(e) => {
+                failure::bail!("error: failed to build image due to {}", e);
+            }
+        }
+        Ok(())
+    }
+}
+
 // [FIX ME] move these tests to be integration tests.
 #[cfg(test)]
 mod test {
@@ -155,5 +214,26 @@ mod test {
         // Will fail as long as Docker is not installed.
         assert_eq!(true, is_installed());
         Ok(())
+    }
+
+    fn _test_image_build() {
+        let path = dirs::home_dir()
+            .expect("failed: `test_image_build` expected home path to be `Some`")
+            .join(".bifrost")
+            .join("container")
+            .join("bifrost");
+
+        let path = String::from(
+            path.to_str()
+                .expect("failed: `setup::build_image` failed to convert path to `str`"),
+        );
+
+        let image = ImageBuilder {
+            name: String::from("docker"),
+            tag: String::from("bifrost:0.1"),
+            path,
+        };
+
+        assert!(image.build().is_ok());
     }
 }

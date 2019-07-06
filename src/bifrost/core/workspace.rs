@@ -719,7 +719,11 @@ impl RunSpace {
             }
         };
 
-        let path = home_path.join("container:").join("test");
+        let path = home_path
+            .join(".bifrost")
+            .join("container:")
+            .join("bifrost");
+
         let path = path
             .to_str()
             .expect("error: could not unwrap path to `run`");
@@ -740,7 +744,7 @@ impl RunSpace {
     fn _run(cmd: &CommandConfig, path: &str) -> BifrostResult<OperationInfo> {
         match cmd.get_cmds() {
             Some(c) => Ok(RunSpace::_run_process(c, path)?),
-            _ => failure::bail!("bail for now [FIX]"),
+            _ => failure::bail!("bail for now  could not get cmds from command config... [FIX]"),
         }
     }
 
