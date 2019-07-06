@@ -63,7 +63,11 @@ impl Default for Config {
         // Do not let users construct a Bifrost realm from within _THE_ Bifrost
         // directory or the Bifrost container directory.
         let bifrost_path = home_path.as_path().join(".bifrost");
-        let container_path = home_path.as_path().join(".bifrost").join("container");
+        let container_path = home_path
+            .as_path()
+            .join(".bifrost")
+            .join("container")
+            .join("bifrost");
 
         if cwd == home_path
             || cwd == PathBuf::from("/")
@@ -96,8 +100,8 @@ impl Config {
                 None => Some(BifrostManifest::new(&args)),
                 Some(m) => {
                     eprintln!(
-                        "BUG: reinitializing manifest {:#?} `manifest` \
-                         was Some prior to intialization",
+                        "BUG: re-initializing manifest {:#?} `manifest` \
+                         was Some prior to initialization",
                         m
                     );
                     process::exit(1);
@@ -234,7 +238,7 @@ impl BifrostManifest {
             failure::bail!(
                 "--could not find `Bifrost.toml`
        within the current working directory.
-note: a Bifrost realm must be intialized before use.
+note: a Bifrost realm must be initialized before use.
 try:
     bifrost init
 "
