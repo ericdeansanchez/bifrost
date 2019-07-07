@@ -14,31 +14,34 @@ fn main() -> BifrostResult<()> {
     // [TODO] Look into `get_matches_safe`
     let app = cli().get_matches();
 
-    let config = Config::default();
-
     // [TODO] Looks like the only thing `exec` needs is `arg_matches`
     // [TODO] Clean this repetition up
     match app.subcommand() {
         ("init", Some(arg_matches)) => {
+            let config = Config::default();
             exit_if_not_setup(&config)?;
             commands::init::exec(config, arg_matches)?;
         }
         ("load", Some(arg_matches)) => {
+            let config = Config::default();
             exit_if_not_setup(&config)?;
             exit_if_uninitialized(&config, "load")?;
             commands::load::exec(config, arg_matches)?;
         }
         ("show", Some(arg_matches)) => {
+            let config = Config::default();
             exit_if_not_setup(&config)?;
             exit_if_uninitialized(&config, "show")?;
             commands::show::exec(config, arg_matches)?;
         }
         ("unload", Some(arg_matches)) => {
+            let config = Config::default();
             exit_if_not_setup(&config)?;
             exit_if_uninitialized(&config, "unload")?;
             commands::unload::exec(config, arg_matches)?;
         }
         ("run", Some(arg_matches)) => {
+            let config = Config::default();
             exit_if_not_setup(&config)?;
             exit_if_uninitialized(&config, "run")?;
             // TODO - determine best way of starting docker...
