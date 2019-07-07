@@ -20,7 +20,7 @@ name = "name of workspace"
 ignore = ["target", ".git", ".gitignore"]
 
 [command]
-cmd = ["command string(s)"]
+cmds = ["command string(s)"]
 "#;
 
 /// Initialize a given directory as a Bifrost realm.
@@ -121,7 +121,7 @@ name = "{}"
 ignore = ["target", ".git", ".gitignore"]
 
 [command]
-cmd = ["command string(s)"]
+cmds = ["command string(s)"]
 "#,
         name
     )

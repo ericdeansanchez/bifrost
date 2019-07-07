@@ -37,6 +37,7 @@ pub fn cli() -> App {
 /// list.
 fn all_sub_commands() -> Vec<App> {
     let mut sub_commands: Vec<App> = vec![];
+    sub_command_setup(&mut sub_commands);
     sub_command_init(&mut sub_commands);
     sub_command_run(&mut sub_commands);
     sub_command_show(&mut sub_commands);
@@ -44,6 +45,30 @@ fn all_sub_commands() -> Vec<App> {
     sub_command_load(&mut sub_commands);
 
     sub_commands
+}
+
+fn sub_command_setup(commands: &mut Vec<App>) {
+    const ABOUT: &str = "Setup the utilities bifrost requires to operate";
+    const USAGE: &str = "bifrost setup";
+    const LONG: &str = "
+ Setup the utilities bifrost requires to operate. This command is intended
+ to be run once after a successful install. Bifrost aims to be transparent
+ about changes it makes to a system. This command creates the following
+ directory structure in your $HOME directory:
+
+.bifrost
+└── container
+    └── bifrost
+        └── Dockerfile
+ 
+ ";
+
+    let s = SubCommand::with_name("setup")
+        .about(ABOUT)
+        .long_about(LONG)
+        .usage(USAGE);
+
+    commands.push(s);
 }
 
 fn sub_command_unload(commands: &mut Vec<App>) {
@@ -163,9 +188,9 @@ the Bifrost container realm.
 fn sub_command_load(commands: &mut Vec<App>) {
     const SHORT: &str = "Load directory, file, or files into the bifrost container";
     const USAGE: &str = "
-    bifrost load [OPTIONS] <contents>
-    bifrost load [OPTIONS] project/
-    bifrost load [OPTIONS] main.c avl.c bst.c
+    bifrost load [OPTIONS] --contents <contents>
+    bifrost load [OPTIONS] --contents project/
+    bifrost load [OPTIONS] --contents main.c avl.c bst.c
 ";
 
     let mut s = SubCommand::with_name("load")

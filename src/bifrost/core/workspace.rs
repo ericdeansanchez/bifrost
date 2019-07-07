@@ -719,14 +719,22 @@ impl RunSpace {
             }
         };
 
-        let path = home_path.join("container:").join("test");
+        let path = home_path
+            .join(".bifrost")
+            .join("container:")
+            .join("bifrost");
+
         let path = path
             .to_str()
             .expect("error: could not unwrap path to `run`");
 
+        let target_dir = self
+            .name()
+            .expect("error: `run` expected name to be `Some`");
+
         let mut output = match self.cmd {
-            Some(ref b) => RunSpace::_run(b, &path)?,
-            None => failure::bail!("error: failed to `run` `BinaryConfig` is `None`"),
+            Some(ref b) => RunSpace::_run(b, &path, &target_dir)?,
+            None => failure::bail!("error: failed to `run` `CommandConfig` is `None`"),
         };
 
         output.name = self
@@ -737,14 +745,18 @@ impl RunSpace {
         Ok(output)
     }
 
-    fn _run(cmd: &CommandConfig, path: &str) -> BifrostResult<OperationInfo> {
+    fn _run(cmd: &CommandConfig, path: &str, target_dir: &str) -> BifrostResult<OperationInfo> {
         match cmd.get_cmds() {
-            Some(c) => Ok(RunSpace::_run_process(c, path)?),
-            _ => failure::bail!("bail for now [FIX]"),
+            Some(c) => Ok(RunSpace::_run_process(c, path, target_dir)?),
+            _ => failure::bail!("bail for now  could not get cmds from command config... [FIX]"),
         }
     }
 
-    fn _run_process(cmds: &Vec<String>, path: &str) -> BifrostResult<OperationInfo> {
+    fn _run_process(
+        cmds: &Vec<String>,
+        path: &str,
+        target_dir: &str,
+    ) -> BifrostResult<OperationInfo> {
         let mut process = Popen::create(
             &[
                 "docker",
@@ -764,8 +776,13 @@ impl RunSpace {
         )
         .expect("Popen failure");
 
+        // [FIX ME] - this works right now, however, it is
+        // ugly and brittle.
         let md_cmd = cmds.join(" && ");
-        let mounted_cmd = format!("bash -c \"cd /test/; {}; \"", md_cmd);
+        let mounted_cmd = format!(
+            "bash -c \"cd /bifrost/bifrost; cd {}; {}; \"",
+            target_dir, md_cmd
+        );
 
         let _sp = SpinnerBuilder::new("Running...".into())
             .spinner(vec![

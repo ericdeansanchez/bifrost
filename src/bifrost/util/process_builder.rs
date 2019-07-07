@@ -112,7 +112,6 @@ impl std::error::Error for ProcessError {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::core::hofund;
     use crate::util::BifrostResult;
 
     #[test]
@@ -196,60 +195,5 @@ mod test {
         };
 
         assert!(cat.exec().is_err());
-    }
-
-    // #[test]
-    fn _test_with_rust_hello_world() -> BifrostResult<()> {
-        use dirs;
-        let home_path =
-            dirs::home_dir().expect("could not get home path will testing `process_builder`");
-
-        let process = ProcessBuilder {
-            program: String::from("cargo"),
-            args: vec![String::from("--version")],
-            cwd: Some(home_path.clone()),
-        };
-
-        if let Ok(output) = process.exec() {
-            if let Some(status_code) = output.status.code() {
-                if status_code != 0i32 {
-                    // cargo not installed...
-                    // this test was just for fun anyways.
-                    return Ok(());
-                }
-            }
-        }
-
-        let path = home_path.join(".bifrost").join("container");
-
-        let process = ProcessBuilder {
-            program: String::from("cargo"),
-            args: vec![String::from("new"), String::from("hello_world")],
-            cwd: Some(path.clone()),
-        };
-
-        let output = process.exec()?;
-
-        let got = output.status.code().expect("expected 0i32");
-        let expected = 0i32;
-        assert_eq!(expected, got);
-
-        let path = path.clone().join("hello_world");
-
-        let process = ProcessBuilder {
-            program: String::from("cargo"),
-            args: vec![String::from("run")],
-            cwd: Some(path.clone()),
-        };
-
-        let output = process.exec()?;
-
-        let got = output.status.code().expect("expected 0i32");
-        let expected = 0i32;
-        assert_eq!(expected, got);
-
-        hofund::remove_dir_all(&path)?;
-
-        Ok(())
     }
 }

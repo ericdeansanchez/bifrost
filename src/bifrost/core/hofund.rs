@@ -36,7 +36,7 @@ pub fn remove_file(path: &Path) -> BifrostResult<()> {
     }
 }
 
-/// Removes the entire diretory specified by path.
+/// Removes the entire directory specified by path.
 ///
 /// # Warn
 /// Use carefully!
