@@ -2,6 +2,7 @@ use bifrost::core::app::cli;
 use bifrost::core::config::Config;
 use bifrost::util::{docker, BifrostResult};
 
+use std::env;
 use std::io::{self, Write};
 use std::path::Path;
 use std::process;
@@ -47,13 +48,27 @@ fn main() -> BifrostResult<()> {
                 )?;
                 process::exit(1);
             }
-
             if !docker::is_running() {
                 docker::start(config.home_path())?;
             }
             commands::run::exec(config, arg_matches)?;
         }
         ("setup", Some(arg_matches)) => {
+            // Construct a new `Config`--a default config instance cannot be
+            // constructed in the top-level $HOME directory (as it assumes this
+            // isn't what a user intends).
+            let cwd = match env::current_dir() {
+                Ok(path) => Some(path),
+                Err(e) => {
+                    io::stderr().write_fmt(format_args!(
+                        "failed: `bifrost setup` failed to get the \
+                         current working directory due to: {}",
+                        e
+                    ))?;
+                    process::exit(1);
+                }
+            };
+            let config = Config::new(dirs::home_dir(), cwd);
             commands::setup::exec(config, arg_matches)?;
         }
         _ => {

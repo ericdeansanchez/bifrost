@@ -87,6 +87,14 @@ impl Default for Config {
 }
 
 impl Config {
+    /// Constructs a new `Config` with the assumption that the caller knows best.
+    pub fn new(home_path: Option<PathBuf>, cwd: Option<PathBuf>) -> Self {
+        Config {
+            home_path: home_path.unwrap_or(PathBuf::new()),
+            cwd: cwd.unwrap_or(PathBuf::new()),
+            manifest: None,
+        }
+    }
     /// Initializes this `Config`s manifest. This method differs from `Config::config_manifest`
     /// in that it expects `self.manifest` to be `None`. In this case, this method
     /// returns a new `BifrostManifest` which is either a default or a default
