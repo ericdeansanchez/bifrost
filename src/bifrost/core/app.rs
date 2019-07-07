@@ -56,10 +56,10 @@ fn sub_command_setup(commands: &mut Vec<App>) {
  about changes it makes to a system. This command creates the following
  directory structure in your $HOME directory:
 
-    .bifrost
-    ├── Dockerfile
-    └── container
-        └── test
+.bifrost
+└── container
+    └── bifrost
+        └── Dockerfile
  
  ";
 
