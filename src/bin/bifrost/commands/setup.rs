@@ -1,4 +1,4 @@
-//! Executes `birost setup`.
+//! Executes `bifrost setup`.
 use std::fs;
 use std::io::{self, Write};
 use std::path::PathBuf;

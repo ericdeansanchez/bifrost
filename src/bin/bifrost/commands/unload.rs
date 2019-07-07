@@ -1,4 +1,4 @@
-//! Executes `birost show`.
+//! Executes `bifrost show`.
 use bifrost::core::config::Config;
 use bifrost::ops::bifrost_unload;
 use bifrost::util::BifrostResult;

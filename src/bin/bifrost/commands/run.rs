@@ -1,4 +1,4 @@
-//! Executes `birost run`.
+//! Executes `bifrost run`.
 use bifrost::core::config::Config;
 use bifrost::ops::bifrost_run;
 use bifrost::util::BifrostResult;
