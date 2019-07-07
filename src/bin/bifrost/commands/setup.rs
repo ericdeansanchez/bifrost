@@ -12,6 +12,8 @@ use bifrost::util::BifrostResult;
 
 use clap::ArgMatches;
 
+/// Executes the "setup" command which sets up the scaffolding necessary for
+/// the other bifrost ops to be executed.
 pub fn exec(config: Config, _args: &ArgMatches) -> BifrostResult<()> {
     if let Err(e) = check_installation(config.cwd()) {
         io::stderr().write_fmt(format_args!(
@@ -27,6 +29,8 @@ pub fn exec(config: Config, _args: &ArgMatches) -> BifrostResult<()> {
     Ok(())
 }
 
+/// Checks for a valid bifrost installation. Bifrost can be installed in a variety
+/// of ways; as long as we have one we can execute the setup command.
 fn check_installation(path: &PathBuf) -> BifrostResult<()> {
     let bifrost = ProcessBuilder {
         program: String::from("bifrost"),
@@ -40,6 +44,8 @@ fn check_installation(path: &PathBuf) -> BifrostResult<()> {
     Ok(())
 }
 
+/// Checks for an existing bifrost directory. If found, this function alerts the
+/// user and then exits. Prior to `bifrost setup` nothing should be set-up.
 fn check_for_bifrost_directory(home_path: &PathBuf) -> BifrostResult<()> {
     if fs::metadata(&home_path.join(".bifrost")).is_ok() {
         io::stderr().write(
@@ -52,22 +58,33 @@ fn check_for_bifrost_directory(home_path: &PathBuf) -> BifrostResult<()> {
     Ok(())
 }
 
+/// Sets up the bifrost scaffolding (i.e. bifrost and container directories).
 fn setup(home_path: &PathBuf) -> BifrostResult<()> {
     create_bifrost_directory(home_path)?;
     build_image(home_path)?;
     Ok(())
 }
 
+/// Creates the necessary directory tree for bifrost to operate.
+///
+/// # Errors
+///
+/// If at any point this function cannot create a directory or cannot
+/// write to the Dockerfile, this function returns an error.
 fn create_bifrost_directory(home_path: &PathBuf) -> BifrostResult<()> {
+    // Create the top-level hidden bifrost directory.
     let bifrost_path = home_path.join(".bifrost");
     fs::create_dir(&bifrost_path)?;
 
+    // Create the container directory.
     let container_path = bifrost_path.join("container");
     fs::create_dir(&container_path)?;
 
+    // Create the bifrost directory.
     let bifrost_container = container_path.join("bifrost");
     fs::create_dir(&bifrost_container)?;
 
+    // Prepare the contents of the default Dockerfile.
     let docker_file_contents = r#"
 FROM ubuntu:16.04
 
@@ -82,11 +99,19 @@ RUN apt-get install -y \
 # Update new packages
 RUN apt-get update
 "#;
+
+    // Write the contents.
     let docker_file = bifrost_container.join("Dockerfile");
     hofund::write(&docker_file, docker_file_contents.as_bytes())?;
     Ok(())
 }
 
+/// Builds the docker image.
+///
+/// # Errors
+///
+/// The last step of this function is executes the build process. Building the
+/// image can fail; if it does fail, then this function returns that error.
 fn build_image(home_path: &PathBuf) -> BifrostResult<()> {
     let path = home_path.join(".bifrost").join("container").join("bifrost");
 
@@ -104,7 +129,8 @@ fn build_image(home_path: &PathBuf) -> BifrostResult<()> {
     Ok(image.build()?)
 }
 
-// (Maybe) Move to integration and change semantics
+// Allow these tests to remain for documentation purposes. Eventually, they
+// could/should be removed or transitioned into integration tests.
 #[cfg(test)]
 mod test {
     use super::*;
