@@ -216,7 +216,8 @@ mod test {
         Ok(())
     }
 
-    fn _test_image_build() {
+    #[test]
+    fn test_image_build() {
         let path = dirs::home_dir()
             .expect("failed: `test_image_build` expected home path to be `Some`")
             .join(".bifrost")
