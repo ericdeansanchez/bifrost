@@ -16,6 +16,24 @@ macOS Mojave, and another OS––Ubuntu.
 Bifröst is currently a **work in progress** and is progressing towards an actual
 release (as opposed to the pre-release being offered now).
 
+## Contents
+
+* [Requirements](#requirements)
+* [Installation](#installation)
+  * [Setup](#setup)
+* [Example](#example)
+* [Contributing](#contributing)
+
+## Requirements
+
+Bifröst depends on **[docker](https://www.docker.com/get-started)** and
+requires that docker is installed. Perhaps, in the future, bifröst can be more
+flexible with the container engines it supports.
+
+While running **macOS** is not necessarily a requirement, development and
+testing has been primarily done on this OS. Ensuring Windows compatibility is
+next on the todo list.
+
 ## Installation
 
 Bifröst is still under its initial development, however, a pre-release version is
@@ -190,10 +208,18 @@ stdout:
 gcc (Ubuntu 5.4.0-6ubuntu1~16.04.11) 5.4.0 20160609
 ```
 
-# For Rust Users
+# Contributing
 
-If you want to contribute to bifröst or just want to play around with it, feel
-free to clone, build, and test it beforehand.
+Contributions are welcome! No contribution is too small––bug fix, a new feature,
+or a typo fix––all are welcome.
+
+* contribution [template]()
+* issue [template]()
+
+## Prerequisites
+
+Bifröst is written in Rust so make sure you have [Rust installed](https://www.rust-lang.org/tools/install.)
+
 
 ## Clone
 
