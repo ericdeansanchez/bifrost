@@ -74,6 +74,31 @@ fn main() -> BifrostResult<()> {
             let config = Config::new(dirs::home_dir(), cwd);
             commands::setup::exec(config, arg_matches)?;
         }
+        ("teardown", Some(arg_matches)) => {
+            let config = Config::default();
+            exit_if_not_setup(&config)?;
+            io::stdout()
+                .write_all("bifrost: are you sure you want to teardown? y or n ".as_bytes())?;
+            io::stdout().flush()?;
+
+            let mut input = String::new();
+            match io::stdin().read_line(&mut input) {
+                Ok(_) => {
+                    if let Some(c) = input.chars().next() {
+                        if c == 'y' || c == 'Y' {
+                            commands::teardown::exec(config, arg_matches)?;
+                        }
+                    }
+                }
+                Err(e) => {
+                    io::stderr().write_fmt(format_args!(
+                        "failed: `bifrost teardown` encountered the following error: {}",
+                        e
+                    ))?;
+                    process::exit(1);
+                }
+            }
+        }
         _ => {
             println!("{}", bifrost::util::template::EXPLICIT_LONG_HELP);
         }
