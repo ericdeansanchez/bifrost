@@ -13,43 +13,208 @@ Bifröst seeks to be a convenience layer between you and a containerized command
 line application. The general idea is to be a bridge between one OS, say
 macOS Mojave, and another OS––Ubuntu.
 
-For example, I have this command line app that I cannot use on macOS Mojave, but
-it is a breeze to run on linux. I don't want to dual-boot, I don't want to run anything
-in a virtual machine, and I don't want to rely on university lab machines.
-
-With Bifröst, I want to be able to containerize a command line app, automate file
-transfering (loading, reloading, unloading) and run a sequence of commands without
-so much command-line hand-jamming.
-
-Bifröst is currently a **work in progress** and is not currently ready for use.
+Bifröst is currently a **work in progress** and is progressing towards an actual
+release (as opposed to the pre-release being offered now).
 
 ## Installation
 
-Bifröst is still under initial development, however, a pre-release version is
+Bifröst is still under its initial development, however, a pre-release version is
 available via:
 
 ```
-  $ brew install bifrost
+  $ brew install ericdeansanchez/heimdallr/bifrost
 ```
 **Warning**: see the note below.
 
 #### Note
 This release is only meant to keep development rolling forward and
-* it is **NOT** intended for general use and
-* it is **NOT** ready for general use
+* it is not _necessarily_ intended for general use and
+* it is not _necessarily_ ready for general use
 
-Currently, Wed Jun 26 16:52:28 PDT 2019, it lacks some external/supporting directories and files
-necessary for persistence and basic operation.
+## Setup
 
+Once bifröst has been installed, there is one last step to perform before it can
+be used:
 
+Ensure you have the latest bifröst version:
+
+```bash
+$ bifrost --version
+```
+This next part can take a little while, but that's because it has some `build`ing
+to do. Run the following command and take a little break or something (get
+up and stretch or check hacker news).
+
+Run the `setup` command:
+```bash
+$ bifrost setup
+```
+
+This will create the following directory tree:
+```text
+.bifrost
+└── container
+    └── bifrost
+        └── Dockerfile
+```
+
+It isn't necessary to know this. However, it can be hard to know exactly what
+apps are doing, where they do it, etc. So this is included for the purposes of
+transparency.
+
+## Example
+
+Now that everything has been set up, you can start using the bifröst.
+
+```bash
+$ mkdir example
+```
+
+```bash
+$ cd example
+```
+
+```bash
+$ touch main.c
+```
+
+Using your editor of choice:
+
+In `example/main.c`:
+```c
+#include <stdio.h>
+
+int main() {
+  printf("hello world\n");
+  return 0;
+}
+```
+Now, for whatever reason you don't want to compile and run this program on your
+system, but instead you want to run it on ubuntu:16.04:
+
+Initial the current working directory as a bifröst realm:
+
+In `example/`:
+```bash
+$ bifrost init
+```
+If everything went well you should see the following message displayed:
+
+```text
+initialized default bifrost realm in ../../example
+```
+Great! The directory tree should look like this:
+
+```text
+example/
+├── Bifrost.toml
+└── main.c
+```
+
+Now open the `Bifrost.toml` manifest for editing. The default manifest looks
+something like this:
+
+```toml
+[project]
+name = "project name"
+
+[container]
+name = "docker"
+
+[workspace]
+name = "example"
+ignore = ["target", ".git", ".gitignore"]
+
+[command]
+cmds = ["command string(s)"]
+```
+Now, `"command string(s)"` is not a valid command so change this to:
+
+```toml
+[command]
+cmds = [
+  "cd example",
+  "gcc main.c -o main",
+  "./main"
+]
+```
+Awesome, now lets `load` up our container:
+
+```bash
+$ bifrost load
+```
+The corresponding output should be something like:
+
+```text
+bifrost: loaded {278} bytes from realm {example}
+```
+
+And now it's time to `run` our program. If the docker desktop is not currently
+up and running, bifröst will start it up for you and proceed to run your program
+with the supplied `cmds`.
+
+Let's try it:
+
+```bash
+$ bifrost run
+```
+
+The corresponding output should be something like:
+
+```text
+stdout:
+hello world
+
+stderr:
+```
+Success!
+
+## What Happened?
+
+Bifröst is executing commands in the context of the running container. Our `cmds`
+relied on the container knowing what `cd` and `gcc` were (that they were installed
+and executable). 
+
+We can change our commands, `cmds`, to the following:
+
+```toml
+[command]
+cmds = [
+  "gcc --version"
+]
+```
+
+And the corresponding output would be:
+```text
+stdout:
+gcc (Ubuntu 5.4.0-6ubuntu1~16.04.11) 5.4.0 20160609
+```
+
+# For Rust Users
+
+If you want to contribute to bifröst or just want to play around with it, feel
+free to clone, build, and test it beforehand.
+
+## Clone
+
+Clone the repository:
+
+```bash
+$ git clone https://github.com/ericdeansanchez/bifrost.git
+```
 
 ## Build
+
+cd into the repository and run:
 
 ```bash
 $ cargo build
 ```
 
 ## Test
+
+Ensure the tests pass on your system (please open an issue if they do not):
+
 ```bash
 $ cargo test
 ```
@@ -65,8 +230,6 @@ $ cargo doc --no-deps --open
 ```
 
 ## Run
-
-Bifrost is currently a work in progress and running it looks something like:
 
 ```bash
 $ cargo run init
