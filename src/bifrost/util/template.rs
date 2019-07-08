@@ -1,12 +1,10 @@
 //! Main application templates and other stringly things.
 pub const APP_TEMPLATE: &str = "
-
     ____  _ ____                __
    / __ )(_) __/_____*_*  _____/ /_
   / __  / / /_/ ___/ __ \\/ ___/ __/
  / /_/ / / __/ /  / /_/ (__  ) /_
 /_____/_/_/ /_/   \\____/____/\\__/
-
 
 
 AUTHORS:
@@ -38,14 +36,11 @@ USAGE:
 ";
 
 pub const EXPLICIT_LONG_HELP: &str = "
-
-
     ____  _ ____                __
    / __ )(_) __/_____*_*  _____/ /_
   / __  / / /_/ ___/ __ \\/ ___/ __/
  / /_/ / / __/ /  / /_/ (__  ) /_
 /_____/_/_/ /_/   \\____/____/\\__/
-
 
 
 AUTHORS:
@@ -64,13 +59,14 @@ FLAGS:
 
 
 SUBCOMMANDS:
-    help      Prints this message or the help of the given subcommand(s)
-    init      Initialize a bifrost directory within the current working directory
-    load      Load directory, file, or files into the bifrost container
-    run       Run command string(s) on a bifrost workspace
-    setup     Setup the utilities bifrost requires to operate
-    show      Display files currently in the bifrost container
-    unload    Unload a workspace from the bifrost container
+    help        Prints this message or the help of the given subcommand(s)
+    init        Initialize a bifrost directory within the current working directory
+    load        Load directory, file, or files into the bifrost container
+    run         Run command string(s) on a bifrost workspace
+    setup       Setup the utilities bifrost requires to operate
+    show        Display files currently in the bifrost container
+    teardown    Teardown the utilities bifrost requires to operate
+    unload      Unload a workspace from the bifrost container
 
 USAGE:
     bifrost [COMMAND] [OPTION]

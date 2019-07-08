@@ -37,12 +37,13 @@ pub fn cli() -> App {
 /// list.
 fn all_sub_commands() -> Vec<App> {
     let mut sub_commands: Vec<App> = vec![];
-    sub_command_setup(&mut sub_commands);
     sub_command_init(&mut sub_commands);
-    sub_command_run(&mut sub_commands);
-    sub_command_show(&mut sub_commands);
-    sub_command_unload(&mut sub_commands);
     sub_command_load(&mut sub_commands);
+    sub_command_run(&mut sub_commands);
+    sub_command_setup(&mut sub_commands);
+    sub_command_show(&mut sub_commands);
+    sub_command_teardown(&mut sub_commands);
+    sub_command_unload(&mut sub_commands);
 
     sub_commands
 }
@@ -64,6 +65,29 @@ fn sub_command_setup(commands: &mut Vec<App>) {
  ";
 
     let s = SubCommand::with_name("setup")
+        .about(ABOUT)
+        .long_about(LONG)
+        .usage(USAGE);
+
+    commands.push(s);
+}
+
+fn sub_command_teardown(commands: &mut Vec<App>) {
+    const ABOUT: &str = "Teardown the utilities bifrost requires to operate";
+    const USAGE: &str = "bifrost teardown";
+    const LONG: &str = "
+The `teardown` command is the reciprocal operation of `setup`. That is, whatever
+the `setup` command does this command undoes. Before uninstalling bifrost, you
+can use bifrost to teardown (remove) the following directory:
+
+.bifrost
+└── container
+    └── bifrost
+        └── Dockerfile
+ 
+ ";
+
+    let s = SubCommand::with_name("teardown")
         .about(ABOUT)
         .long_about(LONG)
         .usage(USAGE);
