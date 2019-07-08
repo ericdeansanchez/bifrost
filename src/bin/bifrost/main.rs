@@ -74,11 +74,6 @@ fn main() -> BifrostResult<()> {
             let config = Config::new(dirs::home_dir(), cwd);
             commands::setup::exec(config, arg_matches)?;
         }
-        ("teardown", Some(_)) => {
-            let config = Config::default();
-            exit_if_not_setup(&config)?;
-
-        }
         _ => {
             println!("{}", bifrost::util::template::EXPLICIT_LONG_HELP);
         }
