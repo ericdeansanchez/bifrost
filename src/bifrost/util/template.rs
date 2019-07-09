@@ -48,7 +48,7 @@ ericdeansanchez <ericdeansanchez@berkeley.edu>,
 parkerduckworth <parker_duckworth@icloud.com>
 
 ABOUT:
-Bridging the tool gap
+virtualization via containers
 
 FLAGS:
     -h, --help       
