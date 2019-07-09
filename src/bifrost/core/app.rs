@@ -20,8 +20,8 @@ type App = clap::App<'static, 'static>;
 /// and a function to essentially register each argument.
 pub fn cli() -> App {
     let mut app = App::new("bifrost")
-        .about("Bridging the tool gap")
-        .version("0.1")
+        .about("virtualization via containers")
+        .version("v0.1.0-beta")
         .author(crate_authors!(",\n"))
         .template(APP_TEMPLATE)
         .usage(BIFROST_USAGE);
