@@ -44,16 +44,7 @@ fn main() -> BifrostResult<()> {
             let config = Config::default();
             exit_if_not_setup(&config)?;
             exit_if_uninitialized(&config, "run")?;
-            // TODO - determine best way of starting docker...
-            if !docker::is_installed() {
-                io::stderr().write(
-                    "error: cannot `run` is docker installed (e.g. $ docker -v)".as_bytes(),
-                )?;
-                process::exit(1);
-            }
-            if !docker::is_running() {
-                docker::start(config.home_path())?;
-            }
+            start_container_or_exit(config.home_path())?;
             commands::run::exec(config, arg_matches)?;
         }
         ("setup", Some(arg_matches)) => {
@@ -71,7 +62,9 @@ fn main() -> BifrostResult<()> {
                     process::exit(1);
                 }
             };
+
             let config = Config::new(dirs::home_dir(), cwd);
+            start_container_or_exit(config.home_path())?;
             commands::setup::exec(config, arg_matches)?;
         }
         ("teardown", Some(arg_matches)) => {
@@ -159,10 +152,28 @@ fn exit_if_uninitialized(config: &Config, op: &str) -> BifrostResult<()> {
     Ok(())
 }
 
-pub fn check_initialized<P: AsRef<Path>>(cwd: P) -> bool {
+fn check_initialized<P: AsRef<Path>>(cwd: P) -> bool {
     use std::fs;
     if fs::metadata(&cwd.as_ref().join("Bifrost.toml")).is_err() {
         return false;
     }
     true
+}
+
+fn start_container_or_exit<P: AsRef<Path>>(path: P) -> BifrostResult<()> {
+    if !docker::is_installed() {
+        io::stderr().write(
+            "\
+failed: bifrost failed to start container
+    
+    is docker installed (e.g. $ docker -v)?
+"
+            .as_bytes(),
+        )?;
+        process::exit(1);
+    }
+    if !docker::is_running() {
+        docker::start(&path)?;
+    }
+    Ok(())
 }
