@@ -7,6 +7,8 @@ currently being designed to bridge the gap between one tool in particular.
 
 [![Build Status](https://travis-ci.org/ericdeansanchez/bifrost.svg?branch=master)](https://travis-ci.org/ericdeansanchez/bifrost)
 
+[![Rustc Version 1.34+]][rustc]
+
 ## Overview
 
 Bifröst seeks to be a convenience layer between you and a containerized command
