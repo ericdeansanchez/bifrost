@@ -290,9 +290,9 @@ impl WorkSpaceArgs {
 /// * `exec` - executes the structures primary function (e.g. `load` for `LoadSpace`, `show` for `ShowSpace`)
 pub trait BifrostOperable {
     /// Prepares implementor to be built.
-    fn prep(&mut self) -> BifrostResult<&mut BifrostOperable>;
+    fn prep(&mut self) -> BifrostResult<&mut dyn BifrostOperable>;
     /// Builds implementor to be executed.
-    fn build(&mut self) -> BifrostResult<&mut BifrostOperable>;
+    fn build(&mut self) -> BifrostResult<&mut dyn BifrostOperable>;
     /// Executes implementor's executive function(s).
     fn exec(&mut self) -> BifrostResult<OperationInfo>;
     /// Returns the operable `BifrostPath`.
@@ -423,7 +423,7 @@ impl BifrostOperable for LoadSpace {
     /// Prepares a `LoadSpace` by ensuring that its target destination (`BifrostPath`)
     /// does not already exist. Reassigns `self.bifrost_path` if and only if the
     /// `BifrostPath` is unique.
-    fn prep(&mut self) -> BifrostResult<&mut BifrostOperable> {
+    fn prep(&mut self) -> BifrostResult<&mut dyn BifrostOperable> {
         if self.target.is_some() {
             failure::bail!("error: a `BifrostPath` has already been prepared for this `LoadSpace`");
         }
@@ -434,7 +434,7 @@ impl BifrostOperable for LoadSpace {
     /// Builds a `LoadSpace` by calling `walk` on each underlying `WorkingDir` owned
     /// by the workspace's contents. Reassigns `self.workspace.contents` and reassigns
     /// `self.workspace.size` if and only if each `walk` was successful.
-    fn build(&mut self) -> BifrostResult<&mut BifrostOperable> {
+    fn build(&mut self) -> BifrostResult<&mut dyn BifrostOperable> {
         if let Some(contents) = self.workspace.contents.as_mut() {
             let mut nybtes = 0u64;
             let mut walked_content: Vec<WorkingDir> = vec![];
@@ -561,14 +561,14 @@ impl ShowSpace {
 impl BifrostOperable for ShowSpace {
     /// Prepares a `ShowSpace` by setting its `BifrostPath` from the current
     /// existing workspace.
-    fn prep(&mut self) -> BifrostResult<&mut BifrostOperable> {
+    fn prep(&mut self) -> BifrostResult<&mut dyn BifrostOperable> {
         let path = BifrostPath::try_from_existing(self.home_path(), self.name())?;
         self.target = Some(path);
         Ok(self)
     }
 
     /// Builds a `ShowSpace` given its `BifrostOptions`.
-    fn build(&mut self) -> BifrostResult<&mut BifrostOperable> {
+    fn build(&mut self) -> BifrostResult<&mut dyn BifrostOperable> {
         if let Some(ref opts) = self.opts {
             if opts.verbose {
                 return Ok(self);
@@ -660,14 +660,14 @@ impl UnloadSpace {
 impl BifrostOperable for UnloadSpace {
     /// Prepares an `UnloadSpace` by setting its `BifrostPath` from the current
     /// existing workspace.
-    fn prep(&mut self) -> BifrostResult<&mut BifrostOperable> {
+    fn prep(&mut self) -> BifrostResult<&mut dyn BifrostOperable> {
         let path = BifrostPath::try_from_existing(self.home_path(), self.name())?;
         self.target = Some(path);
         Ok(self)
     }
 
     /// Builds an `UnloadSpace`.
-    fn build(&mut self) -> BifrostResult<&mut BifrostOperable> {
+    fn build(&mut self) -> BifrostResult<&mut dyn BifrostOperable> {
         Ok(self)
     }
 
@@ -818,7 +818,7 @@ impl RunSpace {
 /// Implements `BifrostOperable` for `RunSpace`.
 /// A `RunSpace` is `prep`-able, `build`-able, and `exec`-utable.
 impl BifrostOperable for RunSpace {
-    fn prep(&mut self) -> BifrostResult<&mut BifrostOperable> {
+    fn prep(&mut self) -> BifrostResult<&mut dyn BifrostOperable> {
         // Path should exist
         let path = BifrostPath::try_from_existing(self.home_path(), self.name())?;
         self.target = Some(path);
@@ -830,7 +830,7 @@ impl BifrostOperable for RunSpace {
     }
 
     /// Builds an `RunSpace`.
-    fn build(&mut self) -> BifrostResult<&mut BifrostOperable> {
+    fn build(&mut self) -> BifrostResult<&mut dyn BifrostOperable> {
         Ok(self)
     }
 
@@ -939,7 +939,7 @@ impl WorkSpaceBuilder {
     fn args_to_paths(
         config: &Config,
         args: Vec<String>,
-        f: &Fn(&Config, &str) -> BifrostResult<bool>,
+        f: &dyn Fn(&Config, &str) -> BifrostResult<bool>,
     ) -> Vec<PathBuf> {
         let ws_path_names = strip(&args);
         let ws_paths = check(&config, ws_path_names, f);
@@ -953,7 +953,7 @@ impl WorkSpaceBuilder {
 fn check(
     config: &Config,
     names: Vec<String>,
-    f: &Fn(&Config, &str) -> BifrostResult<bool>,
+    f: &dyn Fn(&Config, &str) -> BifrostResult<bool>,
 ) -> Vec<String> {
     names
         .into_iter()
