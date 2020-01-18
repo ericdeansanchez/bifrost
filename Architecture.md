@@ -1,7 +1,7 @@
 # Bifröst Architecture
 
-At a high level, Biföst aims to make working with containerized command line apps
-easier. Here is an overview of the general architecture that supports this goal.
+At a high level, Bifröst aims to make working with containerized command line apps
+easier. It is a work-in-progress and it works **for me**. Here is an overview of the general architecture that supports this goal.
 
 ## High Level Project Structure
 ```text
@@ -34,7 +34,7 @@ line argument parser for Rust." The functionality clap provides more than suits
 Bifröst's needs. 
 
 Subcommands are built up in [app.rs](src/bifrost/core/app.rs) in a iterative
-fashion. Clap has been influential in allowing Biföst reach its goals of being
+fashion. Clap has been influential in allowing Bifröst reach its goals of being
 extensible, modular, and straightforward.
 
 All subcommands are registered with the top-level application via the `all_sub_commands`
