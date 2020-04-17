@@ -29,7 +29,7 @@ are `exec`uted.
 
 ## (Sub) Commands
 
-Bifröst is a binary command line that utilizes [clap](https://clap.rs)––"a command 
+Bifröst is a binary command line app that utilizes [clap](https://clap.rs)––"a command 
 line argument parser for Rust." The functionality clap provides more than suits
 Bifröst's needs. 
 
